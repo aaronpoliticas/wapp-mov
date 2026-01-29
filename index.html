@@ -1,61 +1,192 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>WAPP - MOV | Registro en la Nube</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }
-        #displayMovimiento { font-size: 2em; color: #2c3e50; font-weight: bold; margin: 20px 0; }
-        button { padding: 10px 20px; font-size: 1em; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 5px; }
-        button:hover { background: #2980b9; }
-    </style>
-</head>
-<body>
+import React, { useState, useEffect } from 'react';
+import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 
-    <div class="card">
-        <h1>WAPP - MOV</h1>
-        <p>Último valor procesado:</p>
-        <div id="displayMovimiento">Cargando...</div>
+// URL de tu "puente" de Google
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUY0bJyWiGJnoAlDY6HOgu1NVO11u2sTrsJRwnV0y-gIUteTRdEuvAwyOyyqYyWM9g0g/exec";
+
+const App = () => {
+  const [processedRows, setProcessedRows] = useState([]);
+  const [lastSavedSignature, setLastSavedSignature] = useState(null);
+  const [lastSavedDate, setLastSavedDate] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [fileName, setFileName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // --- NUEVA FUNCIÓN: CARGAR DESDE LA NUBE ---
+  useEffect(() => {
+    const fetchCloudData = async () => {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        const dataText = await response.text();
         
-        <input type="text" id="nuevoDato" placeholder="Escribe algo nuevo...">
-        <button onclick="enviarDato()">Actualizar para todos</button>
-    </div>
-
-    <script>
-        // TU URL MAESTRA
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUY0bJyWiGJnoAlDY6HOgu1NVO11u2sTrsJRwnV0y-gIUteTRdEuvAwyOyyqYyWM9g0g/exec";
-
-        // Función 1: Leer el dato de Google Sheets al abrir la página
-        window.onload = function() {
-            fetch(SCRIPT_URL)
-                .then(res => res.text())
-                .then(valor => {
-                    document.getElementById("displayMovimiento").innerText = valor;
-                })
-                .catch(err => console.error("Error leyendo:", err));
-        };
-
-        // Función 2: Enviar el dato a Google Sheets
-        function enviarDato() {
-            const dato = document.getElementById("nuevoDato").value;
-            if(!dato) return alert("Escribe algo primero");
-
-            document.getElementById("displayMovimiento").innerText = "Guardando...";
-
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({ ultimoMovimiento: dato })
-            }).then(() => {
-                // Como usamos no-cors, no podemos leer la respuesta, 
-                // pero el cambio se verá reflejado en unos segundos
-                setTimeout(() => {
-                    document.getElementById("displayMovimiento").innerText = dato;
-                    document.getElementById("nuevoDato").value = "";
-                }, 1000);
-            });
+        // Si el valor no es "0" o vacío, intentamos parsear el objeto guardado
+        if (dataText && dataText !== "0" && dataText !== "Inicio") {
+          const savedObj = JSON.parse(dataText);
+          setLastSavedSignature(savedObj);
+          setLastSavedDate(savedObj.fecha);
         }
-    </script>
-</body>
-</html>
+      } catch (err) {
+        console.error("Error al conectar con Google Sheets:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCloudData();
+  }, []);
+
+  // --- NUEVA FUNCIÓN: GUARDAR EN LA NUBE ---
+  const saveToCloud = async (newestMovement) => {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Necesario para Google Apps Script
+        body: JSON.stringify({ ultimoMovimiento: JSON.stringify(newestMovement) })
+      });
+    } catch (err) {
+      console.error("Error guardando en la nube:", err);
+    }
+  };
+
+  const clearMemory = async () => {
+    setStatusMessage({ type: 'info', text: 'Limpiando memoria en la nube...' });
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ ultimoMovimiento: "0" })
+      });
+      setLastSavedSignature(null);
+      setLastSavedDate(null);
+      setProcessedRows([]);
+      setFileName("");
+      setStatusMessage({ type: 'info', text: 'Memoria reiniciada en la nube y localmente.' });
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: 'Error al limpiar la nube.' });
+    }
+  };
+
+  // (Tus funciones auxiliares se mantienen igual)
+  const parseCurrency = (str) => {
+    if (!str) return 0;
+    const cleanStr = str.replace(/,/g, '').trim();
+    const num = parseFloat(cleanStr);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const getMonthYear = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length < 3) return '';
+    return `${parts[1]}/${parts[2]}`;
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => processFileContent(e.target.result);
+    reader.readAsText(file);
+    event.target.value = ''; 
+  };
+
+  const processFileContent = (text) => {
+    const lines = text.split('\n');
+    const newRows = [];
+    const startIndex = lines[0].toLowerCase().includes('concepto') ? 1 : 0;
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const columns = line.split('\t');
+      if (columns.length < 2) continue;
+
+      const fecha = columns[0].trim();
+      const descripcion = columns[1].trim();
+      const cargo = parseCurrency(columns[2]);
+      const abono = parseCurrency(columns[3]);
+      const importe = abono - cargo;
+
+      newRows.push({
+        fecha,
+        descripcion,
+        importe,
+        rawSignature: `${fecha}-${descripcion}-${importe}`
+      });
+    }
+
+    if (newRows.length === 0) {
+      setStatusMessage({ type: 'error', text: 'No se encontraron movimientos.' });
+      return;
+    }
+
+    // --- LÓGICA DE DEDUPLICACIÓN (Ahora usa el estado de la nube) ---
+    const currentMonth = getMonthYear(newRows[0].fecha);
+    const lastSavedMonth = getMonthYear(lastSavedDate);
+    let finalRows = [];
+
+    if (lastSavedDate && currentMonth !== lastSavedMonth) {
+      setStatusMessage({ type: 'info', text: `Nuevo mes: ${currentMonth}.` });
+      finalRows = newRows;
+    } else if (lastSavedSignature) {
+      const cutOffIndex = newRows.findIndex(row => row.rawSignature === lastSavedSignature.rawSignature);
+      if (cutOffIndex === -1) {
+        finalRows = newRows;
+        setStatusMessage({ type: 'warning', text: 'Sin coincidencia. Procesando todo.' });
+      } else if (cutOffIndex === 0) {
+        finalRows = [];
+        setStatusMessage({ type: 'success', text: '¡Todo al día!' });
+      } else {
+        finalRows = newRows.slice(0, cutOffIndex);
+        setStatusMessage({ type: 'success', text: `Nuevos: ${finalRows.length}` });
+      }
+    } else {
+      finalRows = newRows;
+    }
+
+    setProcessedRows(finalRows);
+
+    // GUARDAR EN LA NUBE EL MÁS RECIENTE
+    if (newRows.length > 0) {
+      const newestMovement = newRows[0];
+      setLastSavedSignature(newestMovement);
+      setLastSavedDate(newestMovement.fecha);
+      saveToCloud(newestMovement); // <--- Llamada a la nube
+    }
+  };
+
+  // (Función downloadCSV se mantiene igual)
+  const downloadCSV = () => {
+    if (processedRows.length === 0) return;
+    const headers = ['FECHA', 'DESCRIPCION', 'IMPORTE'];
+    const csvContent = [
+      headers.join(','),
+      ...processedRows.map(row => `${row.fecha},"${row.descripcion.replace(/"/g, '""')}",${row.importe.toFixed(2)}`)
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `movimientos_${new Date().toISOString().slice(0,10)}.csv`);
+    link.click();
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      {/* ... El resto de tu JSX se mantiene igual ... */}
+      {/* Solo agregué un indicador de carga inicial */}
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg border border-gray-100">
+        <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+            <h1>Procesador MOV Nube</h1>
+            {isLoading ? <p className="text-xs">Sincronizando...</p> : 
+             lastSavedDate && <p className="text-xs">Último: {lastSavedDate}</p>}
+        </div>
+        
+        {/* Aquí va todo tu contenido de Status, Upload Area y Tabla igual que antes */}
+        {/* ... */}
+      </div>
+    </div>
+  );
+};
+
+export default App;
