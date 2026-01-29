@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WAPP - MOV | Finanzas</title>
+    <title>SSC | Conversor MOV BBVA</title>
     
     <!-- 1. Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -230,7 +230,7 @@
                 return isNaN(num) ? 0 : num;
             };
 
-            // CORRECCIÓN AQUÍ: Soporte robusto para guiones (-) y diagonales (/)
+            // Soporte robusto para guiones (-) y diagonales (/)
             const parseDate = (dateStr) => {
                 if (!dateStr) return new Date(0);
                 
@@ -243,6 +243,16 @@
                 // Se asume formato DD/MM/YYYY
                 // new Date(year, monthIndex, day)
                 return new Date(parts[2], parts[1] - 1, parts[0]);
+            };
+
+            // Función para formatear fecha a MM-DD-YYYY para Odoo
+            const formatDateForOdoo = (dateStr) => {
+                // Entrada esperada DD/MM/YYYY o DD-MM-YYYY
+                const parts = dateStr.split(/[\/\-]/);
+                if (parts.length < 3) return dateStr; // Retorna original si falla
+                
+                // Salida deseada MM-DD-YYYY
+                return `${parts[1]}-${parts[0]}-${parts[2]}`;
             };
 
             const getMonthYear = (dateStr) => {
@@ -349,7 +359,11 @@
                     headers.join(','),
                     ...processedRows.map(row => {
                         const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
-                        return `${row.fecha},${descSafe},${row.importe.toFixed(2)}`;
+                        
+                        // CORRECCIÓN DE FORMATO: MM-DD-YYYY
+                        const fechaFormateada = formatDateForOdoo(row.fecha);
+                        
+                        return `${fechaFormateada},${descSafe},${row.importe.toFixed(2)}`;
                     })
                 ].join('\n');
 
