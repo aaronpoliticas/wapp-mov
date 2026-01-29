@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>WAPP - MOV | Registro en la Nube</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }
+        #displayMovimiento { font-size: 2em; color: #2c3e50; font-weight: bold; margin: 20px 0; }
+        button { padding: 10px 20px; font-size: 1em; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>WAPP - MOV</h1>
+        <p>Último valor procesado:</p>
+        <div id="displayMovimiento">Cargando...</div>
+        
+        <input type="text" id="nuevoDato" placeholder="Escribe algo nuevo...">
+        <button onclick="enviarDato()">Actualizar para todos</button>
+    </div>
+
+    <script>
+        // TU URL MAESTRA
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUY0bJyWiGJnoAlDY6HOgu1NVO11u2sTrsJRwnV0y-gIUteTRdEuvAwyOyyqYyWM9g0g/exec";
+
+        // Función 1: Leer el dato de Google Sheets al abrir la página
+        window.onload = function() {
+            fetch(SCRIPT_URL)
+                .then(res => res.text())
+                .then(valor => {
+                    document.getElementById("displayMovimiento").innerText = valor;
+                })
+                .catch(err => console.error("Error leyendo:", err));
+        };
+
+        // Función 2: Enviar el dato a Google Sheets
+        function enviarDato() {
+            const dato = document.getElementById("nuevoDato").value;
+            if(!dato) return alert("Escribe algo primero");
+
+            document.getElementById("displayMovimiento").innerText = "Guardando...";
+
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ ultimoMovimiento: dato })
+            }).then(() => {
+                // Como usamos no-cors, no podemos leer la respuesta, 
+                // pero el cambio se verá reflejado en unos segundos
+                setTimeout(() => {
+                    document.getElementById("displayMovimiento").innerText = dato;
+                    document.getElementById("nuevoDato").value = "";
+                }, 1000);
+            });
+        }
+    </script>
+</body>
+</html>
