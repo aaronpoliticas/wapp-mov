@@ -16,8 +16,8 @@
         .cursor-wait { cursor: wait; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div id="root"></div>
+<body class="bg-[#F3F4F6] min-h-screen flex items-center justify-center py-10 px-4 font-sans">
+    <div id="root" class="w-full max-w-3xl"></div>
 
     <!-- 3. Tu Aplicación React -->
     <script type="text/babel" data-type="module">
@@ -30,23 +30,26 @@
         // --- DICCIONARIO DE TRADUCCIONES ---
         const TRANSLATIONS = {
             es: {
-                title: "WAPP - MOV",
-                subtitle: "Procesador de extractos con memoria en la nube",
-                syncing: "Sync...",
+                title: "Conversor MOV",
+                subtitlePre: "Preparación de archivos ",
+                subtitleUnderline: "MOV BBVA",
+                subtitlePost: " para importación en Odoo.",
+                syncing: "Sinc...",
                 lastProcessed: "Último procesado:",
                 noData: "Sin datos",
                 settingsTitle: "CONFIGURACIÓN",
                 restartMemory: "Reiniciar memoria",
                 uploadTitle: "Arrastra tu archivo MOV aquí",
                 uploadSubtitle: "o haz clic para buscarlo",
+                chooseFileBtn: "Elegir Archivo",
                 previewTitle: "Vista Previa",
                 newItems: "nuevos",
-                downloadBtn: "Descargar CSV",
-                footerSync: "Sincronizado con Google Sheets",
+                downloadBtn: "Descargar CSV para Odoo",
+                footerText: "SSC GOURMET DISTRIBUTION 2026",
                 
                 // Mensajes de estado
                 msgErrorFile: "Archivo inválido o vacío.",
-                msgMonthChange: "Cambio de mes detectedo. Se procesó información de un mes nuevo.",
+                msgMonthChange: "Cambio de mes detectado. Se procesó información de un mes nuevo.",
                 msgNewMonthGeneric: "Se procesó información de un mes nuevo.",
                 msgUpToDate: "¡Todo al día! No hay movimientos nuevos.",
                 msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
@@ -66,20 +69,23 @@
 
                 // Instrucciones
                 instrTitle: "Instrucciones de Uso",
-                step1: "Descarga los movimientos de la banca BBVA en formato .txt del día.",
-                step2: "Arrastra el archivo a la sección de carga marcada arriba.",
-                step3: "Si no hay errores, aparecerá un botón verde para descargar el archivo .csv.",
-                step4: "Abre Odoo, entra a Contabilidad y arrastra el archivo al cuadro de la cuenta:",
+                step1: "Descarga los movimientos de la banca BBVA en formato .txt del día",
+                step2: "Arrastra el archivo a la sección de carga marcada arriba",
+                step3: "Si no hay errores aparecerá un botón morado para descargar el archivo .csv",
+                step4: "Abre Odoo entra a Contabilidad y arrastra el archivo al cuadro de la cuenta:",
                 step5part1: "En la ventana emergente oprime",
                 step5btn1: "\"Probar\"",
-                step5part2: ". Si aparece la leyenda",
+                step5part2: "Si aparece la leyenda",
                 step5msg: "\"Todo parece correcto\"",
-                step5part3: ", oprime",
+                step5part3: "oprime",
                 step5btn2: "\"Importar\"",
+                langLabel: "LENGUAJE / LANGUE"
             },
             fr: {
-                title: "WAPP - MOV",
-                subtitle: "Processeur d'extraits bancaires avec mémoire cloud",
+                title: "Convertisseur MOV",
+                subtitlePre: "Préparation des fichiers ",
+                subtitleUnderline: "MOV BBVA",
+                subtitlePost: " pour l'importation dans Odoo.",
                 syncing: "Sync...",
                 lastProcessed: "Dernier traité :",
                 noData: "Aucune donnée",
@@ -87,10 +93,11 @@
                 restartMemory: "Réinitialiser la mémoire",
                 uploadTitle: "Glissez votre fichier MOV ici",
                 uploadSubtitle: "ou cliquez pour parcourir",
+                chooseFileBtn: "Choisir le fichier",
                 previewTitle: "Aperçu",
                 newItems: "nouveaux",
-                downloadBtn: "Télécharger CSV",
-                footerSync: "Synchronisé avec Google Sheets",
+                downloadBtn: "Télécharger CSV pour Odoo",
+                footerText: "SSC GOURMET DISTRIBUTION 2026",
                 
                 // Mensajes de estado
                 msgErrorFile: "Fichier invalide ou vide.",
@@ -114,16 +121,17 @@
 
                 // Instrucciones
                 instrTitle: "Instructions d'Utilisation",
-                step1: "Téléchargez les mouvements bancaires BBVA au format .txt du jour.",
-                step2: "Glissez le fichier dans la zone de chargement indiquée ci-dessus.",
-                step3: "S'il n'y a pas d'erreur, un bouton vert apparaîtra pour télécharger le fichier .csv.",
-                step4: "Ouvrez Odoo, allez dans Comptabilité et glissez le fichier dans le cadre du compte :",
-                step5part1: "Dans la fenêtre contextuelle, cliquez sur",
-                step5btn1: "\"Tester\"",
-                step5part2: ". Si le message",
-                step5msg: "\"Tout semble correct\"",
-                step5part3: "apparaît, cliquez sur",
-                step5btn2: "\"Importer\"",
+                step1: "Téléchargez les mouvements bancaires BBVA au format .txt du jour",
+                step2: "Glissez le fichier dans la zone de chargement indiquée ci-dessus",
+                step3: "S'il n'y a pas d'erreur un bouton violet apparaîtra pour télécharger le fichier .csv",
+                step4: "Ouvrez Odoo allez dans Comptabilité et glissez le fichier dans le cadre du compte :",
+                step5part1: "Dans la fenêtre contextuelle cliquez sur",
+                step5btn1: "\"Probar\"",
+                step5part2: "Si le message",
+                step5msg: "\"Todo parece correcto\"",
+                step5part3: "apparaît cliquez sur",
+                step5btn2: "\"Importar\"",
+                langLabel: "LENGUAJE / LANGUE"
             }
         };
 
@@ -135,7 +143,6 @@
             const [fileName, setFileName] = useState("");
             const [isSyncing, setIsSyncing] = useState(false);
             
-            // Estado para idioma (es por defecto)
             const [language, setLanguage] = useState('es');
             const t = TRANSLATIONS[language];
 
@@ -143,7 +150,6 @@
             const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
             const settingsRef = useRef(null);
 
-            // --- 1. CARGA INICIAL ---
             useEffect(() => {
                 fetchLastMovement();
                 const handleClickOutside = (event) => {
@@ -180,7 +186,6 @@
                 }
             };
 
-            // --- 2. GUARDADO EN NUBE ---
             const saveToCloud = async (movement) => {
                 setIsSyncing(true);
                 try {
@@ -218,7 +223,6 @@
                 setStatusMessage({ type: 'info', text: t.msgDeleted });
             };
 
-            // --- UTILIDADES DE PARSEO ---
             const parseCurrency = (str) => {
                 if (!str) return 0;
                 const cleanStr = str.replace(/,/g, '').trim();
@@ -250,7 +254,6 @@
                 event.target.value = ''; 
             };
 
-            // --- LÓGICA PRINCIPAL ---
             const processFileContent = (text) => {
                 const currentT = TRANSLATIONS[language]; 
 
@@ -352,258 +355,269 @@
             };
 
             return (
-                <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
-                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 relative">
+                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full relative">
                     
                     {/* Header */}
-                    <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+                    <div className="bg-white p-8 pb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-bold flex items-center gap-2">
-                            <FileText className="w-6 h-6" /> {t.title}
+                            {/* Titulo con fuente Century Gothic / sans-serif y tamaño aumentado */}
+                            <h1 className="text-4xl font-bold text-[#1e293b] tracking-tight" style={{ fontFamily: "'Century Gothic', Futura, sans-serif" }}>
+                                {t.title}
                             </h1>
-                            <p className="text-blue-100 text-sm mt-1">{t.subtitle}</p>
+                            <p className="text-gray-500 text-sm mt-2">
+                                {t.subtitlePre}
+                                <span className="underline decoration-1 underline-offset-2 decoration-gray-400">{t.subtitleUnderline}</span>
+                                {t.subtitlePost}
+                            </p>
                         </div>
                         
-                        <div className="flex items-center gap-4">
-                            {/* Estado de sincronización */}
+                        {/* Estado de sincronización / Cuadro Rectangular Redondeado (no píldora) */}
+                        <div>
                             {isSyncing ? (
-                                <div className="flex items-center gap-1 text-xs bg-blue-700/50 px-2 py-1 rounded animate-pulse">
+                                <div className="bg-gray-100 text-gray-500 rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-medium animate-pulse">
                                     <Loader2 className="w-3 h-3 animate-spin" />
                                     {t.syncing}
                                 </div>
                             ) : (
-                                lastSavedDate ? (
-                                    <div className="text-right text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2" title="Memoria Sincronizada">
-                                        <div>
-                                            <p className="opacity-75">{t.lastProcessed}</p>
-                                            <p className="font-mono font-bold">{lastSavedDate}</p>
-                                        </div>
-                                        <Cloud className="w-5 h-5 text-blue-200" />
-                                    </div>
-                                ) : (
-                                    <div className="text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2 opacity-75">
-                                        <span>{t.noData}</span>
-                                        <CloudOff className="w-5 h-5" />
-                                    </div>
-                                )
+                                <div className={`rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-medium ${lastSavedDate ? 'bg-[#9CA3AF] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                    {lastSavedDate ? (
+                                        <>
+                                            <span className="opacity-90">{t.lastProcessed}</span>
+                                            <span className="font-mono font-bold">{lastSavedDate}</span>
+                                            <Cloud className="w-4 h-4 ml-1" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>{t.noData}</span>
+                                            <CloudOff className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </div>
                             )}
-
-                            {/* Botón de Ajustes */}
-                            <div className="relative" ref={settingsRef}>
-                                <button 
-                                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                                    className="p-2 hover:bg-blue-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
-                                >
-                                    <Settings className="w-6 h-6 text-white" />
-                                </button>
-                                
-                                {isSettingsOpen && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="p-3 border-b border-gray-100 bg-gray-50">
-                                            <p className="text-xs font-semibold text-gray-500 uppercase">{t.settingsTitle}</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => {
-                                                if (lastSavedDate) setShowDeleteConfirm(true);
-                                                setIsSettingsOpen(false);
-                                            }}
-                                            disabled={!lastSavedDate || isSyncing}
-                                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            {t.restartMemory}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <div className="p-8 space-y-8">
+                    <div className="p-8 space-y-6">
                     
-                    {/* Status Messages */}
-                    {statusMessage && (
-                        <div className={`p-4 rounded-lg flex items-start gap-3 ${
-                        statusMessage.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' :
-                        statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
-                        statusMessage.type === 'warning' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                        'bg-blue-50 text-blue-700 border border-blue-200'
+                        {/* Status Messages */}
+                        {statusMessage && (
+                            <div className={`p-4 rounded-xl flex items-start gap-3 border ${
+                            statusMessage.type === 'error' ? 'bg-red-50 text-red-700 border-red-100' :
+                            statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border-green-100' :
+                            statusMessage.type === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                            'bg-blue-50 text-blue-700 border-blue-100'
+                            }`}>
+                            {statusMessage.type === 'success' && <CheckCircle className="w-5 h-5 mt-0.5" />}
+                            {statusMessage.type === 'error' && <AlertCircle className="w-5 h-5 mt-0.5" />}
+                            {statusMessage.type === 'warning' && <AlertCircle className="w-5 h-5 mt-0.5" />}
+                            {statusMessage.type === 'info' && <Info className="w-5 h-5 mt-0.5" />}
+                            
+                            <div>
+                                <p className="font-medium text-sm">{statusMessage.text}</p>
+                            </div>
+                            </div>
+                        )}
+
+                        {/* Upload Area */}
+                        <div className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 relative group ${
+                            isSyncing ? 'border-gray-200 bg-gray-50 cursor-wait' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
                         }`}>
-                        {statusMessage.type === 'success' && <CheckCircle className="w-5 h-5 mt-0.5" />}
-                        {statusMessage.type === 'error' && <AlertCircle className="w-5 h-5 mt-0.5" />}
-                        {statusMessage.type === 'warning' && <AlertCircle className="w-5 h-5 mt-0.5" />}
-                        {statusMessage.type === 'info' && <Info className="w-5 h-5 mt-0.5" />}
-                        
-                        <div>
-                            <p className="font-medium">{statusMessage.text}</p>
-                        </div>
-                        </div>
-                    )}
-
-                    {/* Upload Area */}
-                    <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors relative group ${isSyncing ? 'border-gray-200 bg-gray-50 cursor-wait' : 'border-gray-300 hover:bg-gray-50'}`}>
-                        <input 
-                        type="file" 
-                        accept=".txt,.csv,.tsv" 
-                        onChange={handleFileUpload}
-                        disabled={isSyncing}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                        />
-                        <div className={`flex flex-col items-center gap-3 ${isSyncing ? 'opacity-50' : ''}`}>
-                        <div className="bg-blue-100 p-4 rounded-full text-blue-600 group-hover:scale-110 transition-transform">
-                            <Upload className="w-8 h-8" />
-                        </div>
-                        <div>
-                            <p className="text-lg font-medium text-gray-700">
-                                {fileName ? fileName : t.uploadTitle}
-                            </p>
-                            <p className="text-sm text-gray-400 mt-1">
-                                {isSyncing ? t.syncing : t.uploadSubtitle}
-                            </p>
-                        </div>
-                        </div>
-                    </div>
-
-                    {/* Preview & Actions */}
-                    {processedRows.length > 0 ? (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-gray-700">{t.previewTitle} ({processedRows.length} {t.newItems})</h3>
-                            <button 
-                            onClick={downloadCSV}
-                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all hover:shadow-md active:scale-95"
-                            >
-                            <FileDown className="w-5 h-5" />
-                            {t.downloadBtn}
-                            </button>
-                        </div>
-
-                        <div className="border border-gray-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto shadow-inner bg-gray-50">
-                            <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
-                                <tr>
-                                <th className="p-3 border-b">FECHA</th>
-                                <th className="p-3 border-b">DESCRIPCION</th>
-                                <th className="p-3 border-b text-right">IMPORTE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {processedRows.map((row, idx) => (
-                                <tr key={idx} className="border-b last:border-0 hover:bg-white">
-                                    <td className="p-3 text-gray-600 whitespace-nowrap">{row.fecha}</td>
-                                    <td className="p-3 text-gray-800 max-w-xs truncate" title={row.descripcion}>{row.descripcion}</td>
-                                    <td className={`p-3 text-right font-mono font-medium ${row.importe < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                    {row.importe.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                                    </td>
-                                </tr>
-                                ))}
-                            </tbody>
-                            </table>
-                        </div>
-                        </div>
-                    ) : (
-                        fileName && processedRows.length === 0 && statusMessage?.type !== 'error' && (
-                            <div className="text-center py-4 text-gray-600 font-bold">
-                                {t.msgNoNewReport}
-                            </div>
-                        )
-                    )}
-
-                    {/* SECCIÓN DE INSTRUCCIONES + SELECTOR DE IDIOMA REDISEÑADO */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm relative mt-4">
-                        
-                        {/* Selector de Idiomas Nuevo Diseño */}
-                        <div className="absolute top-6 right-6 flex flex-col items-end gap-1.5">
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
-                                <Globe className="w-3 h-3" />
-                                Lenguaje / Langue
-                            </span>
-                            <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-                                <button 
-                                    onClick={() => setLanguage('es')} 
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${
-                                        language === 'es' 
-                                        ? 'bg-blue-50 text-blue-700 border border-blue-100 shadow-sm ring-1 ring-blue-100' 
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                    }`}
-                                >
-                                    <span className="text-base leading-none">🇲🇽</span>
-                                    Español
-                                </button>
-                                <div className="w-px bg-slate-100 my-1 mx-0.5"></div>
-                                <button 
-                                    onClick={() => setLanguage('fr')} 
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${
-                                        language === 'fr' 
-                                        ? 'bg-blue-50 text-blue-700 border border-blue-100 shadow-sm ring-1 ring-blue-100' 
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                                    }`}
-                                >
-                                    <span className="text-base leading-none">🇫🇷</span>
-                                    Français
-                                </button>
-                            </div>
-                        </div>
-
-                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-200 pb-2 pt-1">
-                            <ClipboardList className="w-5 h-5 text-blue-600" />
-                            {t.instrTitle}
-                        </h3>
-                        <ol className="space-y-3 text-sm text-slate-600 list-decimal list-inside marker:text-blue-600 marker:font-bold pr-4 sm:pr-48">
-                            <li>
-                                {t.step1} <span className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-xs text-blue-600">.txt</span>
-                            </li>
-                            <li>
-                                {t.step2}
-                            </li>
-                            <li>
-                                {t.step3} <span className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-xs text-green-600">.csv</span>
-                            </li>
-                            <li>
-                                {t.step4}
-                                <div className="mt-1.5 ml-5 inline-block bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-md font-mono text-xs font-bold">
-                                    BBVA - 012180001206755710
+                            <input 
+                            type="file" 
+                            accept=".txt,.csv,.tsv" 
+                            onChange={handleFileUpload}
+                            disabled={isSyncing}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                            />
+                            <div className={`flex flex-col items-center gap-4 ${isSyncing ? 'opacity-50' : ''}`}>
+                                <div className="bg-white p-4 rounded-2xl shadow-sm text-gray-700 group-hover:scale-110 transition-transform border border-gray-100">
+                                    <Upload className="w-8 h-8" />
                                 </div>
-                            </li>
-                            <li>
-                                {t.step5part1} <span className="font-semibold text-blue-600">{t.step5btn1}</span>. {t.step5part2} <em>{t.step5msg}</em>, {t.step5part3} <span className="font-bold text-green-600">{t.step5btn2}</span>.
-                            </li>
-                        </ol>
+                                <div>
+                                    <p className="text-xl font-semibold text-gray-800">
+                                        {fileName ? fileName : t.uploadTitle}
+                                    </p>
+                                    <p className="text-gray-400 mt-2 font-medium">
+                                        {isSyncing ? t.syncing : t.uploadSubtitle}
+                                    </p>
+                                </div>
+                                {!fileName && !isSyncing && (
+                                    <button className="mt-2 bg-[#0F172A] text-white px-6 py-2 rounded-lg text-sm font-medium opacity-90 group-hover:opacity-100 transition-opacity">
+                                        {t.chooseFileBtn}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Preview & Actions */}
+                        {processedRows.length > 0 ? (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex justify-between items-center px-1">
+                                <h3 className="font-bold text-gray-700">{t.previewTitle} <span className="text-gray-400 font-normal">({processedRows.length} {t.newItems})</span></h3>
+                                <button 
+                                onClick={downloadCSV}
+                                className="bg-[#714B67] hover:bg-[#5a3b52] text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-purple-900/10 transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                >
+                                <FileDown className="w-5 h-5" />
+                                {t.downloadBtn}
+                                </button>
+                            </div>
+
+                            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto shadow-inner bg-gray-50/50">
+                                <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
+                                    <tr>
+                                    <th className="p-3 border-b">FECHA</th>
+                                    <th className="p-3 border-b">DESCRIPCION</th>
+                                    <th className="p-3 border-b text-right">IMPORTE</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {processedRows.map((row, idx) => (
+                                    <tr key={idx} className="border-b last:border-0 hover:bg-white transition-colors">
+                                        <td className="p-3 text-gray-600 whitespace-nowrap">{row.fecha}</td>
+                                        <td className="p-3 text-gray-800 max-w-xs truncate" title={row.descripcion}>{row.descripcion}</td>
+                                        <td className={`p-3 text-right font-mono font-medium ${row.importe < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                        {row.importe.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                    ))}
+                                </tbody>
+                                </table>
+                            </div>
+                            </div>
+                        ) : (
+                            fileName && processedRows.length === 0 && statusMessage?.type !== 'error' && (
+                                <div className="text-center py-6 text-gray-500 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    {t.msgNoNewReport}
+                                </div>
+                            )
+                        )}
+
+                        {/* SECCIÓN DE INSTRUCCIONES + SELECTOR DE IDIOMA */}
+                        <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-8 relative mt-8">
+                            
+                            {/* Selector de Idiomas */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 pb-4 mb-4 gap-4">
+                                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg">
+                                    <ClipboardList className="w-5 h-5 text-gray-600" />
+                                    {t.instrTitle}
+                                </h3>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
+                                        <Globe className="w-3 h-3" />
+                                        {t.langLabel}
+                                    </span>
+                                    <div className="flex bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+                                        <button 
+                                            onClick={() => setLanguage('es')} 
+                                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                                                language === 'es' 
+                                                ? 'bg-gray-100 text-gray-900 shadow-sm' 
+                                                : 'text-gray-400 hover:text-gray-600'
+                                            }`}
+                                        >
+                                            MX Español
+                                        </button>
+                                        <button 
+                                            onClick={() => setLanguage('fr')} 
+                                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                                                language === 'fr' 
+                                                ? 'bg-gray-100 text-gray-900 shadow-sm' 
+                                                : 'text-gray-400 hover:text-gray-600'
+                                            }`}
+                                        >
+                                            FR Français
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ol className="space-y-4 text-sm text-gray-600 list-decimal list-outside ml-4 marker:text-gray-900 marker:font-bold">
+                                <li className="pl-2">
+                                    {t.step1} <span className="font-mono bg-white border border-gray-300 px-1.5 py-0.5 rounded text-xs text-gray-600 font-bold shadow-sm">.txt</span>
+                                </li>
+                                <li className="pl-2">
+                                    {t.step2}
+                                </li>
+                                <li className="pl-2">
+                                    {t.step3} <span className="font-mono bg-white border border-gray-300 px-1.5 py-0.5 rounded text-xs text-[#714B67] font-bold shadow-sm">.csv</span>
+                                </li>
+                                <li className="pl-2">
+                                    {t.step4}
+                                    <div className="mt-2 inline-block bg-[#F3E8FF] border border-purple-200 text-purple-900 px-3 py-1.5 rounded-md font-mono text-xs font-bold shadow-sm">
+                                        BBVA - 012180001206755710
+                                    </div>
+                                </li>
+                                <li className="pl-2">
+                                    {t.step5part1} <span className="font-bold text-purple-700">{t.step5btn1}</span> {t.step5part2} <em className="text-gray-800">{t.step5msg}</em> {t.step5part3} <span className="font-bold text-purple-700">{t.step5btn2}</span>
+                                </li>
+                            </ol>
+                        </div>
+
                     </div>
 
-                    {/* Footer Simple */}
-                    <div className="pt-2 border-t border-gray-100 flex justify-center text-sm text-gray-400">
-                        <p className="flex items-center gap-2 text-xs">
-                            <Cloud className="w-3 h-3" />
-                            {t.footerSync}
+                    {/* Footer + Settings */}
+                    <div className="p-6 border-t border-gray-50 flex items-center justify-center relative bg-white">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-gray-400">
+                            {t.footerText}
                         </p>
-                    </div>
-
+                        
+                        {/* Botón de Ajustes */}
+                        <div className="absolute right-6 bottom-4" ref={settingsRef}>
+                            <button 
+                                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                                className="p-2 bg-[#9CA3AF] hover:bg-gray-600 rounded-lg transition-colors text-white shadow-md hover:shadow-lg"
+                                title={t.settingsTitle}
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                            
+                            {isSettingsOpen && (
+                                <div className="absolute bottom-full right-0 mb-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    <div className="p-3 border-b border-gray-100 bg-gray-50">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase">{t.settingsTitle}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if (lastSavedDate) setShowDeleteConfirm(true);
+                                            setIsSettingsOpen(false);
+                                        }}
+                                        disabled={!lastSavedDate || isSyncing}
+                                        className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        {t.restartMemory}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     
                     {/* Modal de Confirmación */}
                     {showDeleteConfirm && (
-                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-                            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
-                                <div className="p-6 text-center">
-                                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <AlertTriangle className="w-8 h-8 text-red-600" />
+                        <div className="fixed inset-0 bg-gray-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+                                <div className="p-8 text-center">
+                                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <AlertTriangle className="w-8 h-8 text-red-500" />
                                     </div>
                                     <h3 className="text-xl font-bold text-gray-900 mb-2">{t.modalTitle}</h3>
-                                    <p className="text-gray-600 mb-6">
-                                        {t.modalText1} <span className="font-bold text-red-600">{t.modalTextBold}</span>{t.modalText2}
+                                    <p className="text-gray-500 mb-8 leading-relaxed">
+                                        {t.modalText1} <span className="font-bold text-gray-800">{t.modalTextBold}</span>{t.modalText2}
                                     </p>
                                     <div className="flex gap-3 justify-center">
                                         <button 
                                             onClick={() => setShowDeleteConfirm(false)}
-                                            className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                            className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
                                         >
                                             {t.btnCancel}
                                         </button>
                                         <button 
                                             onClick={clearMemory}
-                                            className="px-5 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 shadow-lg shadow-red-200 transition-all hover:scale-105"
+                                            className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 shadow-lg shadow-red-200 transition-all hover:scale-105"
                                         >
                                             {t.btnConfirm}
                                         </button>
@@ -612,7 +626,6 @@
                             </div>
                         </div>
                     )}
-                </div>
                 </div>
             );
         };
