@@ -55,6 +55,7 @@
                 msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
                 msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
                 msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
+                msgWarningDup: "Aviso: Mismo mes pero no se encontró el punto de corte. Verifica duplicados.",
                 
                 // Modal Borrar
                 modalTitle: "¿Estás segur@ de borrar la memoria?",
@@ -107,6 +108,7 @@
                 msgNewFound: (count) => `${count} nouveaux mouvements trouvés.`,
                 msgProcessed: (count) => `Fichier traité. ${count} mouvements prêts.`,
                 msgNoNewReport: "Le fichier a été lu mais il n'y a aucun nouveau mouvement à signaler.",
+                msgWarningDup: "Attention : Même mois mais point d'arrêt non trouvé. Vérifiez les doublons.",
 
                 // Modal Borrar
                 modalTitle: "Êtes-vous sûr de vouloir effacer la mémoire ?",
@@ -233,33 +235,43 @@
             // Soporte robusto para guiones (-) y diagonales (/)
             const parseDate = (dateStr) => {
                 if (!dateStr) return new Date(0);
-                
-                // Reemplazamos guiones por diagonales para estandarizar
                 const cleanDate = dateStr.trim().replace(/-/g, '/');
                 const parts = cleanDate.split('/');
-                
                 if (parts.length < 3) return new Date(0);
-                
-                // Se asume formato DD/MM/YYYY
-                // new Date(year, monthIndex, day)
                 return new Date(parts[2], parts[1] - 1, parts[0]);
             };
 
-            // Función para formatear fecha a MM-DD-YYYY para Odoo
             const formatDateForOdoo = (dateStr) => {
-                // Entrada esperada DD/MM/YYYY o DD-MM-YYYY
                 const parts = dateStr.split(/[\/\-]/);
-                if (parts.length < 3) return dateStr; // Retorna original si falla
-                
-                // Salida deseada MM-DD-YYYY
+                if (parts.length < 3) return dateStr; 
                 return `${parts[1]}-${parts[0]}-${parts[2]}`;
             };
 
             const getMonthYear = (dateStr) => {
                 if (!dateStr) return '';
-                const parts = dateStr.split(/[\/\-]/); // También soporta ambos aquí
+                const parts = dateStr.split(/[\/\-]/); 
                 if (parts.length < 3) return '';
                 return `${parts[1]}/${parts[2]}`; 
+            };
+
+            // --- LÓGICA DE COMPARACIÓN ROBUSTA ("A PRUEBA DE BALAS") ---
+            const isSameRow = (rowA, rowB) => {
+                if (!rowA || !rowB) return false;
+                
+                // 1. Normalizar fechas (ignora si usa - o /)
+                const dateA = rowA.fecha.replace(/-/g, '/').trim();
+                const dateB = rowB.fecha.replace(/-/g, '/').trim();
+                
+                // 2. Normalizar descripción (ignora dobles espacios y mayúsculas/minúsculas)
+                const descA = rowA.descripcion.replace(/\s+/g, ' ').trim().toUpperCase();
+                const descB = rowB.descripcion.replace(/\s+/g, ' ').trim().toUpperCase();
+                
+                // 3. Normalizar importe (compara números con margen de error para decimales flotantes)
+                const impA = parseFloat(rowA.importe);
+                const impB = parseFloat(rowB.importe);
+                const isImporteSame = Math.abs(impA - impB) < 0.01;
+
+                return dateA === dateB && descA === descB && isImporteSame;
             };
 
             const handleFileUpload = (event) => {
@@ -297,7 +309,8 @@
                         fecha,
                         descripcion,
                         importe: importe,
-                        rawSignature: `${fecha}-${descripcion}-${importe}`
+                        // Normalizamos la firma también para consistencia futura
+                        rawSignature: `${fecha}-${descripcion.replace(/\s+/g, ' ').trim()}-${importe.toFixed(2)}`
                     });
                 }
 
@@ -319,11 +332,17 @@
                     finalRows = newRows;
                 } 
                 else if (lastSavedSignature) {
-                    const cutOffIndex = newRows.findIndex(row => row.rawSignature === lastSavedSignature.rawSignature);
+                    // USAMOS LA NUEVA COMPARACIÓN ROBUSTA AQUÍ
+                    const cutOffIndex = newRows.findIndex(row => isSameRow(row, lastSavedSignature));
 
                     if (cutOffIndex === -1) {
                         finalRows = newRows;
-                        setStatusMessage({ type: 'info', text: currentT.msgNewMonthGeneric });
+                        // Si es el mismo mes pero no encuentra corte, avisa posible duplicidad
+                        if (currentMonth === lastSavedMonth) {
+                             setStatusMessage({ type: 'warning', text: currentT.msgWarningDup });
+                        } else {
+                             setStatusMessage({ type: 'info', text: currentT.msgNewMonthGeneric });
+                        }
                     } else if (cutOffIndex === 0) {
                         finalRows = [];
                         setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
@@ -346,7 +365,9 @@
 
                 if (newRows.length > 0) {
                     const newestMovement = newRows[0];
-                    if (isNewMonth || !lastSavedSignature || newestMovement.rawSignature !== lastSavedSignature.rawSignature) {
+                    // Guardamos si es mes nuevo o si el movimiento más reciente cambió
+                    // Usamos la misma comparación robusta para decidir si guardar
+                    if (isNewMonth || !lastSavedSignature || !isSameRow(newestMovement, lastSavedSignature)) {
                         saveToCloud(newestMovement);
                     }
                 }
