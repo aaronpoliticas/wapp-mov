@@ -27,7 +27,7 @@
 
         const API_URL = "https://script.google.com/macros/s/AKfycbwoLFhMe3lBT9YUBceM8MasNCoEif1ykmR7VmGh02knV32JheqTEisfUAksJghQ63oNHw/exec";
 
-        // --- DICCIONARIO DE TRADUCCIONES ---
+        // --- DICCIONARIO DE TRADUCCIONES ACTUALIZADO ---
         const TRANSLATIONS = {
             es: {
                 title: "Conversor MOV",
@@ -35,7 +35,8 @@
                 subtitleUnderline: "MOV BBVA",
                 subtitlePost: " para importación en Odoo.",
                 syncing: "Sinc...",
-                lastProcessed: "Último procesado:",
+                lastProcessed: "Fecha del último movimiento:", // Actualizado
+                lastProcessedSub: "Último mov procesado el:", // Nuevo
                 noData: "Sin datos",
                 settingsTitle: "CONFIGURACIÓN",
                 memStatus: "Memoria Actual:",
@@ -57,7 +58,7 @@
                 msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
                 msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
                 msgWarningDup: "Corte exacto no encontrado. Se filtraron automáticamente fechas anteriores.",
-                msgMethodExact: "Corte Exacto (Ordenado)",
+                msgMethodExact: "Corte Exacto (Orden Original)",
                 msgMethodDate: "Filtrado por Fecha (Seguridad)",
                 
                 // Modal Borrar
@@ -71,12 +72,12 @@
                 msgDeleted: "Memoria reiniciada exitosamente.",
                 msgSaveError: "Error al guardar en la nube.",
 
-                // Instrucciones
+                // Instrucciones (Actualizadas)
                 instrTitle: "Instrucciones de Uso",
                 step1: "Descarga los movimientos de la banca BBVA en formato .txt del día",
-                step2: "Arrastra el archivo a la sección de carga marcada arriba",
-                step3: "Si no hay errores aparecerá un botón morado para descargar el archivo .csv",
-                step4: "Abre Odoo entra a Contabilidad y arrastra el archivo al cuadro de la cuenta:",
+                step2: "Arrastra y suelta en esta página el archivo o selecciona \"Elegir\"",
+                step3: "Si no hay errores, aparecerá un botón morado para descargar el archivo .csv",
+                step4: "Abre Odoo entra a Contabilidad y arrastra el archivo .csv al cuadro de la cuenta:",
                 step5part1: "En la ventana emergente oprime",
                 step5btn1: "\"Probar\"",
                 step5part2: "Si aparece la leyenda",
@@ -91,7 +92,8 @@
                 subtitleUnderline: "MOV BBVA",
                 subtitlePost: " pour l'importation dans Odoo.",
                 syncing: "Sync...",
-                lastProcessed: "Dernier traité :",
+                lastProcessed: "Date du dernier mouvement :", // Actualizado
+                lastProcessedSub: "Dernier mov traité le :", // Nuevo
                 noData: "Aucune donnée",
                 settingsTitle: "PARAMÈTRES",
                 memStatus: "Mémoire Actuelle :",
@@ -127,12 +129,12 @@
                 msgDeleted: "Mémoire réinitialisée avec succès.",
                 msgSaveError: "Erreur lors de l'enregistrement dans le cloud.",
 
-                // Instrucciones
+                // Instrucciones (Actualizadas)
                 instrTitle: "Instructions d'Utilisation",
                 step1: "Téléchargez les mouvements bancaires BBVA au format .txt du jour",
-                step2: "Glissez le fichier dans la zone de chargement indiquée ci-dessus",
-                step3: "S'il n'y a pas d'erreur un bouton violet apparaîtra pour télécharger le fichier .csv",
-                step4: "Ouvrez Odoo allez dans Comptabilité et glissez le fichier dans le cadre du compte :",
+                step2: "Glissez et déposez le fichier sur cette page ou sélectionnez \"Choisir\"",
+                step3: "S'il n'y a pas d'erreur, un bouton violet apparaîtra pour télécharger le fichier .csv",
+                step4: "Ouvrez Odoo, allez dans Comptabilité et glissez le fichier .csv dans le cadre du compte :",
                 step5part1: "Dans la fenêtre contextuelle cliquez sur",
                 step5btn1: "\"Probar\"",
                 step5part2: "Si le message",
@@ -147,6 +149,7 @@
             const [processedRows, setProcessedRows] = useState([]);
             const [lastSavedSignature, setLastSavedSignature] = useState(null);
             const [lastSavedDate, setLastSavedDate] = useState(null);
+            const [lastProcessedTime, setLastProcessedTime] = useState(null); // Nuevo estado para la hora
             const [statusMessage, setStatusMessage] = useState(null);
             const [processingMethod, setProcessingMethod] = useState(null); 
             const [fileName, setFileName] = useState("");
@@ -187,6 +190,8 @@
                     if (data && data.fecha) {
                         setLastSavedSignature(data);
                         setLastSavedDate(data.fecha);
+                        // Si existe la propiedad timestamp la usamos, si no, null
+                        if (data.timestamp) setLastProcessedTime(data.timestamp);
                     }
                 } catch (error) {
                     setStatusMessage({ type: 'warning', text: 'Sin conexión a Google Sheets. Modo local.' });
@@ -198,8 +203,14 @@
             const saveToCloud = async (movement) => {
                 setIsSyncing(true);
                 try {
+                    // Generamos timestamp actual
+                    const now = new Date();
+                    const timestamp = now.toLocaleString(language === 'es' ? 'es-MX' : 'fr-FR');
+                    
+                    const movementWithTime = { ...movement, timestamp }; // Añadimos timestamp al objeto
+
                     const payload = JSON.stringify({ 
-                        ultimoMovimiento: movement ? JSON.stringify(movement) : "" 
+                        ultimoMovimiento: movement ? JSON.stringify(movementWithTime) : "" 
                     });
 
                     await fetch(API_URL, {
@@ -211,9 +222,11 @@
                     if (movement) {
                         setLastSavedSignature(movement);
                         setLastSavedDate(movement.fecha);
+                        setLastProcessedTime(timestamp);
                     } else {
                         setLastSavedSignature(null);
                         setLastSavedDate(null);
+                        setLastProcessedTime(null);
                     }
                 } catch (error) {
                     setStatusMessage({ type: 'error', text: t.msgSaveError });
@@ -300,6 +313,7 @@
                 event.target.value = ''; 
             };
 
+            // --- LÓGICA MAESTRA ---
             const processFileContent = (text) => {
                 const currentT = TRANSLATIONS[language]; 
                 setProcessingMethod(null);
@@ -335,24 +349,11 @@
                     return;
                 }
 
-                // --- 1. ORDENAMIENTO ESTÁNDAR: ANTIGUO A RECIENTE ---
-                // Para tener una línea de tiempo coherente, ordenamos todo por fecha
-                // Si las fechas son iguales, usamos la descripción para mantener un orden determinista
-                newRows.sort((a, b) => {
-                    const dateA = getDateValue(a.fecha);
-                    const dateB = getDateValue(b.fecha);
-                    if (dateA !== dateB) return dateA - dateB; // Antiguo primero
-                    
-                    // Desempate por importe
-                    const impDiff = a.importe - b.importe;
-                    if (Math.abs(impDiff) > 0.01) return impDiff;
-
-                    // Desempate por descripción
-                    return a.descripcion.localeCompare(b.descripcion);
-                });
-
-                const currentFileLastDate = newRows[newRows.length - 1].fecha; // Fecha más reciente (al final)
-                const currentMonth = getMonthYear(currentFileLastDate);
+                // --- NO ORDENAR AQUÍ: Mantenemos orden original ---
+                // Asumimos que el banco entrega los más recientes ARRIBA.
+                
+                const currentFileFirstDate = newRows[0].fecha; 
+                const currentMonth = getMonthYear(currentFileFirstDate);
                 const lastSavedMonth = getMonthYear(lastSavedDate);
 
                 let finalRows = [];
@@ -364,29 +365,22 @@
                     finalRows = newRows;
                 } 
                 else if (lastSavedSignature) {
-                    // --- 2. BÚSQUEDA DEL CORTE EN LA LISTA ORDENADA ---
-                    // Buscamos la ULTIMA aparición del registro guardado
-                    // (Por si hubiera duplicados idénticos en días anteriores, queremos el último procesado)
-                    let cutOffIndex = -1;
-                    for (let i = newRows.length - 1; i >= 0; i--) {
-                        if (isSameRow(newRows[i], lastSavedSignature)) {
-                            cutOffIndex = i;
-                            break;
-                        }
-                    }
+                    // Buscar coincidencia en el orden original (asumiendo que los nuevos están arriba)
+                    // Buscamos el primer match desde arriba. Todo lo de arriba es nuevo.
+                    const cutOffIndex = newRows.findIndex(row => isSameRow(row, lastSavedSignature));
 
                     if (cutOffIndex !== -1) {
                         setProcessingMethod('exact');
-                        // Tomamos todo lo que sigue después del corte
-                        finalRows = newRows.slice(cutOffIndex + 1);
-                        
-                        if (finalRows.length === 0) {
+                        // Tomamos lo que está ARRIBA del corte
+                        if (cutOffIndex === 0) {
+                            finalRows = [];
                             setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
                         } else {
+                            finalRows = newRows.slice(0, cutOffIndex);
                             setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
                         }
                     } else {
-                        // --- 3. FALLBACK: FILTRO POR FECHA ---
+                        // Fallback: Filtro de fecha
                         setProcessingMethod('date');
                         const savedDateVal = getDateValue(lastSavedDate);
                         
@@ -403,19 +397,16 @@
                     }
                 } 
                 else {
-                    // Primera vez
                     finalRows = newRows;
                     setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
                 }
 
-                // La lista 'finalRows' ya viene ordenada (Antiguo -> Reciente) porque 'newRows' se ordenó al inicio.
                 setProcessedRows(finalRows);
 
                 // --- 4. GUARDAR MEMORIA ---
-                // Guardamos el ÚLTIMO elemento de la lista ordenada COMPLETA (newRows)
-                // ya que ese es el movimiento más reciente en el tiempo que hemos visto hoy.
+                // Guardamos el PRIMER elemento del archivo original (el más reciente)
                 if (newRows.length > 0) {
-                    const newestMovement = newRows[newRows.length - 1]; 
+                    const newestMovement = newRows[0]; 
                     
                     if (isNewMonth || !lastSavedSignature || !isSameRow(newestMovement, lastSavedSignature)) {
                         saveToCloud(newestMovement);
@@ -425,10 +416,14 @@
 
             const downloadCSV = () => {
                 if (processedRows.length === 0) return;
+                
+                // CLONAR y ORDENAR para el CSV final: De Viejo a Nuevo
+                const sortedForExport = [...processedRows].sort((a, b) => getDateValue(a.fecha) - getDateValue(b.fecha));
+
                 const headers = ['FECHA', 'DESCRIPCION', 'IMPORTE'];
                 const csvContent = [
                     headers.join(','),
-                    ...processedRows.map(row => {
+                    ...sortedForExport.map(row => {
                         const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
                         const fechaFormateada = formatDateForOdoo(row.fecha);
                         return `${fechaFormateada},${descSafe},${row.importe.toFixed(2)}`;
@@ -468,18 +463,25 @@
                                     {t.syncing}
                                 </div>
                             ) : (
-                                <div className={`rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-medium ${lastSavedDate ? 'bg-[#9CA3AF] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                <div className={`rounded-xl px-4 py-3 flex flex-col items-end gap-1 text-xs font-medium ${lastSavedDate ? 'bg-[#F3F4F6] text-gray-600 border border-gray-200' : 'bg-gray-100 text-gray-400'}`}>
                                     {lastSavedDate ? (
                                         <>
-                                            <span className="opacity-90">{t.lastProcessed}</span>
-                                            <span className="font-mono font-bold">{lastSavedDate}</span>
-                                            <Cloud className="w-4 h-4 ml-1" />
+                                            <div className="flex items-center gap-2">
+                                                <span className="opacity-70 uppercase tracking-wide text-[10px]">{t.lastProcessed}</span>
+                                                <span className="font-mono font-bold text-gray-800 text-sm">{lastSavedDate}</span>
+                                                <Cloud className="w-4 h-4 text-blue-400" />
+                                            </div>
+                                            {lastProcessedTime && (
+                                                <div className="text-[10px] text-gray-400 text-right w-full border-t border-gray-200 pt-1 mt-0.5">
+                                                    {t.lastProcessedSub} <span className="font-mono">{lastProcessedTime}</span>
+                                                </div>
+                                            )}
                                         </>
                                     ) : (
-                                        <>
+                                        <div className="flex items-center gap-2">
                                             <span>{t.noData}</span>
                                             <CloudOff className="w-4 h-4" />
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -579,7 +581,10 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {processedRows.map((row, idx) => (
+                                    {/* Mostrar vista previa en el orden que se descargará (Viejo -> Nuevo) */}
+                                    {/* NOTA: Para la vista previa puede ser útil ver lo más nuevo arriba, 
+                                        pero para consistencia mostramos cómo quedará el CSV. */}
+                                    {[...processedRows].sort((a, b) => getDateValue(a.fecha) - getDateValue(b.fecha)).map((row, idx) => (
                                     <tr key={idx} className="border-b last:border-0 hover:bg-white transition-colors">
                                         <td className="p-3 text-gray-600 whitespace-nowrap">{row.fecha}</td>
                                         <td className="p-3 text-gray-800 max-w-xs truncate" title={row.descripcion}>{row.descripcion}</td>
