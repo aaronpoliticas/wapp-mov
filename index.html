@@ -23,7 +23,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18?dev';
         import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
-        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe, Database, ShieldCheck, Filter } from 'https://esm.sh/lucide-react@0.263.1?dev';
+        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe, Database, ShieldCheck, Filter, ListOrdered } from 'https://esm.sh/lucide-react@0.263.1?dev';
 
         const API_URL = "https://script.google.com/macros/s/AKfycbwoLFhMe3lBT9YUBceM8MasNCoEif1ykmR7VmGh02knV32JheqTEisfUAksJghQ63oNHw/exec";
 
@@ -50,14 +50,14 @@
                 
                 // Mensajes de estado
                 msgErrorFile: "Archivo inválido o vacío.",
-                msgMonthChange: "Cambio de mes detectado. Procesando mes nuevo.",
+                msgMonthChange: "Cambio de mes detectado. Se procesó información de un mes nuevo.",
                 msgNewMonthGeneric: "Se procesó información de un mes nuevo.",
                 msgUpToDate: "¡Todo al día! No hay movimientos nuevos.",
                 msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
                 msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
                 msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
-                msgWarningDup: "Corte exacto no encontrado. Se aplicó filtro estricto por fecha para evitar duplicados.",
-                msgMethodExact: "Corte Exacto Encontrado",
+                msgWarningDup: "Corte exacto no encontrado. Se filtraron automáticamente fechas anteriores.",
+                msgMethodExact: "Corte Exacto (Ordenado)",
                 msgMethodDate: "Filtrado por Fecha (Seguridad)",
                 
                 // Modal Borrar
@@ -148,7 +148,7 @@
             const [lastSavedSignature, setLastSavedSignature] = useState(null);
             const [lastSavedDate, setLastSavedDate] = useState(null);
             const [statusMessage, setStatusMessage] = useState(null);
-            const [processingMethod, setProcessingMethod] = useState(null); // 'exact' | 'date' | null
+            const [processingMethod, setProcessingMethod] = useState(null); 
             const [fileName, setFileName] = useState("");
             const [isSyncing, setIsSyncing] = useState(false);
             
@@ -240,14 +240,12 @@
                 return isNaN(num) ? 0 : num;
             };
 
-            // UTILIDAD: Convertir fecha string a valor numérico comparable (YYYYMMDD)
             const getDateValue = (dateStr) => {
                 if (!dateStr) return 0;
                 const cleanDate = dateStr.trim().replace(/-/g, '/');
                 const parts = cleanDate.split('/');
                 if (parts.length < 3) return 0;
-                // parts[0] = DD, parts[1] = MM, parts[2] = YYYY
-                // Retornar YYYYMMDD como entero
+                // YYYYMMDD para comparación entera
                 return parseInt(`${parts[2]}${parts[1].padStart(2,'0')}${parts[0].padStart(2,'0')}`);
             };
 
@@ -272,29 +270,24 @@
                 return `${parts[1]}/${parts[2]}`; 
             };
 
-            // --- LÓGICA DE COMPARACIÓN BLINDADA (Nivel Máximo) ---
             const normalizeText = (text) => {
                 if (!text) return "";
                 return text
                     .toUpperCase()
                     .replace(/[ÁÉÍÓÚ]/g, (c) => ({'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U'}[c])) 
-                    .replace(/[^A-Z0-9]/g, ''); // Elimina espacios, guiones, puntos, comas, todo.
+                    .replace(/[^A-Z0-9]/g, ''); 
             };
 
             const isSameRow = (rowA, rowB) => {
                 if (!rowA || !rowB) return false;
-                
-                const dateA = rowA.fecha.replace(/-/g, '/').trim();
-                const dateB = rowB.fecha.replace(/-/g, '/').trim();
-                
+                const valA = getDateValue(rowA.fecha);
+                const valB = getDateValue(rowB.fecha);
                 const descA = normalizeText(rowA.descripcion);
                 const descB = normalizeText(rowB.descripcion);
-                
                 const impA = parseFloat(rowA.importe);
                 const impB = parseFloat(rowB.importe);
                 const isImporteSame = Math.abs(impA - impB) < 0.01;
-
-                return dateA === dateB && descA === descB && isImporteSame;
+                return valA === valB && descA === descB && isImporteSame;
             };
 
             const handleFileUpload = (event) => {
@@ -312,7 +305,7 @@
                 setProcessingMethod(null);
 
                 const lines = text.split('\n');
-                const newRows = [];
+                let newRows = [];
                 const startIndex = lines[0].toLowerCase().includes('concepto') ? 1 : 0;
 
                 for (let i = startIndex; i < lines.length; i++) {
@@ -342,8 +335,24 @@
                     return;
                 }
 
-                const currentFileFirstDate = newRows[0].fecha;
-                const currentMonth = getMonthYear(currentFileFirstDate);
+                // --- 1. ORDENAMIENTO ESTÁNDAR: ANTIGUO A RECIENTE ---
+                // Para tener una línea de tiempo coherente, ordenamos todo por fecha
+                // Si las fechas son iguales, usamos la descripción para mantener un orden determinista
+                newRows.sort((a, b) => {
+                    const dateA = getDateValue(a.fecha);
+                    const dateB = getDateValue(b.fecha);
+                    if (dateA !== dateB) return dateA - dateB; // Antiguo primero
+                    
+                    // Desempate por importe
+                    const impDiff = a.importe - b.importe;
+                    if (Math.abs(impDiff) > 0.01) return impDiff;
+
+                    // Desempate por descripción
+                    return a.descripcion.localeCompare(b.descripcion);
+                });
+
+                const currentFileLastDate = newRows[newRows.length - 1].fecha; // Fecha más reciente (al final)
+                const currentMonth = getMonthYear(currentFileLastDate);
                 const lastSavedMonth = getMonthYear(lastSavedDate);
 
                 let finalRows = [];
@@ -355,52 +364,59 @@
                     finalRows = newRows;
                 } 
                 else if (lastSavedSignature) {
-                    // 1. Intento: Busqueda exacta
-                    const cutOffIndex = newRows.findIndex(row => isSameRow(row, lastSavedSignature));
+                    // --- 2. BÚSQUEDA DEL CORTE EN LA LISTA ORDENADA ---
+                    // Buscamos la ULTIMA aparición del registro guardado
+                    // (Por si hubiera duplicados idénticos en días anteriores, queremos el último procesado)
+                    let cutOffIndex = -1;
+                    for (let i = newRows.length - 1; i >= 0; i--) {
+                        if (isSameRow(newRows[i], lastSavedSignature)) {
+                            cutOffIndex = i;
+                            break;
+                        }
+                    }
 
                     if (cutOffIndex !== -1) {
                         setProcessingMethod('exact');
-                        if (cutOffIndex === 0) {
-                            finalRows = [];
+                        // Tomamos todo lo que sigue después del corte
+                        finalRows = newRows.slice(cutOffIndex + 1);
+                        
+                        if (finalRows.length === 0) {
                             setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
                         } else {
-                            finalRows = newRows.slice(0, cutOffIndex);
                             setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
                         }
                     } else {
-                        // 2. Fallback: Filtro NUCLEAR por fecha numérica (Infalible)
+                        // --- 3. FALLBACK: FILTRO POR FECHA ---
                         setProcessingMethod('date');
                         const savedDateVal = getDateValue(lastSavedDate);
                         
                         finalRows = newRows.filter(row => {
                             const rowDateVal = getDateValue(row.fecha);
-                            // Solo pasa si la fecha es ESTRICTAMENTE MAYOR a la guardada
                             return rowDateVal > savedDateVal;
                         });
 
                         if (finalRows.length === 0) {
                              setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
                         } else {
-                             // Si se usó filtro por fecha, avisamos con un warning amarillo para que el usuario revise
                              setStatusMessage({ type: 'warning', text: currentT.msgWarningDup });
                         }
                     }
                 } 
                 else {
+                    // Primera vez
                     finalRows = newRows;
                     setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
                 }
 
-                // Ordenar
-                if (finalRows.length > 0) {
-                    finalRows.sort((a, b) => parseDate(a.fecha) - parseDate(b.fecha));
-                }
-
+                // La lista 'finalRows' ya viene ordenada (Antiguo -> Reciente) porque 'newRows' se ordenó al inicio.
                 setProcessedRows(finalRows);
 
-                // Guardar
+                // --- 4. GUARDAR MEMORIA ---
+                // Guardamos el ÚLTIMO elemento de la lista ordenada COMPLETA (newRows)
+                // ya que ese es el movimiento más reciente en el tiempo que hemos visto hoy.
                 if (newRows.length > 0) {
-                    const newestMovement = newRows[0];
+                    const newestMovement = newRows[newRows.length - 1]; 
+                    
                     if (isNewMonth || !lastSavedSignature || !isSameRow(newestMovement, lastSavedSignature)) {
                         saveToCloud(newestMovement);
                     }
@@ -587,7 +603,6 @@
                         {/* SECCIÓN DE INSTRUCCIONES + SELECTOR DE IDIOMA */}
                         <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-8 relative mt-8">
                             
-                            {/* Selector de Idiomas */}
                             <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 pb-4 mb-4 gap-4">
                                 <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg">
                                     <ClipboardList className="w-5 h-5 text-gray-600" />
