@@ -23,7 +23,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18?dev';
         import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
-        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe } from 'https://esm.sh/lucide-react@0.263.1?dev';
+        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe, Database, ShieldCheck, Filter } from 'https://esm.sh/lucide-react@0.263.1?dev';
 
         const API_URL = "https://script.google.com/macros/s/AKfycbwoLFhMe3lBT9YUBceM8MasNCoEif1ykmR7VmGh02knV32JheqTEisfUAksJghQ63oNHw/exec";
 
@@ -38,6 +38,7 @@
                 lastProcessed: "Último procesado:",
                 noData: "Sin datos",
                 settingsTitle: "CONFIGURACIÓN",
+                memStatus: "Memoria Actual:",
                 restartMemory: "Reiniciar memoria",
                 uploadTitle: "Arrastra tu archivo MOV aquí",
                 uploadSubtitle: "o haz clic para buscarlo",
@@ -49,13 +50,15 @@
                 
                 // Mensajes de estado
                 msgErrorFile: "Archivo inválido o vacío.",
-                msgMonthChange: "Cambio de mes detectado. Se procesó información de un mes nuevo.",
+                msgMonthChange: "Cambio de mes detectado. Procesando mes nuevo.",
                 msgNewMonthGeneric: "Se procesó información de un mes nuevo.",
                 msgUpToDate: "¡Todo al día! No hay movimientos nuevos.",
                 msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
                 msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
                 msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
-                msgWarningDup: "Aviso: Mismo mes pero no se encontró el punto de corte. Verifica duplicados.",
+                msgWarningDup: "Corte exacto no encontrado. Se aplicó filtro estricto por fecha para evitar duplicados.",
+                msgMethodExact: "Corte Exacto Encontrado",
+                msgMethodDate: "Filtrado por Fecha (Seguridad)",
                 
                 // Modal Borrar
                 modalTitle: "¿Estás segur@ de borrar la memoria?",
@@ -91,6 +94,7 @@
                 lastProcessed: "Dernier traité :",
                 noData: "Aucune donnée",
                 settingsTitle: "PARAMÈTRES",
+                memStatus: "Mémoire Actuelle :",
                 restartMemory: "Réinitialiser la mémoire",
                 uploadTitle: "Glissez votre fichier MOV ici",
                 uploadSubtitle: "ou cliquez pour parcourir",
@@ -102,13 +106,15 @@
                 
                 // Mensajes de estado
                 msgErrorFile: "Fichier invalide ou vide.",
-                msgMonthChange: "Changement de mois détecté. Informations du nouveau mois traitées.",
+                msgMonthChange: "Changement de mois détecté. Traitement du nouveau mois.",
                 msgNewMonthGeneric: "Informations d'un nouveau mois traitées.",
                 msgUpToDate: "Tout est à jour ! Aucun nouveau mouvement.",
                 msgNewFound: (count) => `${count} nouveaux mouvements trouvés.`,
                 msgProcessed: (count) => `Fichier traité. ${count} mouvements prêts.`,
                 msgNoNewReport: "Le fichier a été lu mais il n'y a aucun nouveau mouvement à signaler.",
-                msgWarningDup: "Attention : Même mois mais point d'arrêt non trouvé. Vérifiez les doublons.",
+                msgWarningDup: "Point d'arrêt exact non trouvé. Filtre strict par date appliqué.",
+                msgMethodExact: "Point d'arrêt exact trouvé",
+                msgMethodDate: "Filtré par Date (Sécurité)",
 
                 // Modal Borrar
                 modalTitle: "Êtes-vous sûr de vouloir effacer la mémoire ?",
@@ -142,6 +148,7 @@
             const [lastSavedSignature, setLastSavedSignature] = useState(null);
             const [lastSavedDate, setLastSavedDate] = useState(null);
             const [statusMessage, setStatusMessage] = useState(null);
+            const [processingMethod, setProcessingMethod] = useState(null); // 'exact' | 'date' | null
             const [fileName, setFileName] = useState("");
             const [isSyncing, setIsSyncing] = useState(false);
             
@@ -220,6 +227,7 @@
                 setIsSettingsOpen(false);
                 setProcessedRows([]);
                 setFileName("");
+                setProcessingMethod(null);
                 setStatusMessage({ type: 'info', text: t.msgDeleting });
                 await saveToCloud(null);
                 setStatusMessage({ type: 'info', text: t.msgDeleted });
@@ -232,7 +240,17 @@
                 return isNaN(num) ? 0 : num;
             };
 
-            // Soporte robusto para guiones (-) y diagonales (/)
+            // UTILIDAD: Convertir fecha string a valor numérico comparable (YYYYMMDD)
+            const getDateValue = (dateStr) => {
+                if (!dateStr) return 0;
+                const cleanDate = dateStr.trim().replace(/-/g, '/');
+                const parts = cleanDate.split('/');
+                if (parts.length < 3) return 0;
+                // parts[0] = DD, parts[1] = MM, parts[2] = YYYY
+                // Retornar YYYYMMDD como entero
+                return parseInt(`${parts[2]}${parts[1].padStart(2,'0')}${parts[0].padStart(2,'0')}`);
+            };
+
             const parseDate = (dateStr) => {
                 if (!dateStr) return new Date(0);
                 const cleanDate = dateStr.trim().replace(/-/g, '/');
@@ -254,19 +272,24 @@
                 return `${parts[1]}/${parts[2]}`; 
             };
 
-            // --- LÓGICA DE COMPARACIÓN ROBUSTA ("A PRUEBA DE BALAS") ---
+            // --- LÓGICA DE COMPARACIÓN BLINDADA (Nivel Máximo) ---
+            const normalizeText = (text) => {
+                if (!text) return "";
+                return text
+                    .toUpperCase()
+                    .replace(/[ÁÉÍÓÚ]/g, (c) => ({'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U'}[c])) 
+                    .replace(/[^A-Z0-9]/g, ''); // Elimina espacios, guiones, puntos, comas, todo.
+            };
+
             const isSameRow = (rowA, rowB) => {
                 if (!rowA || !rowB) return false;
                 
-                // 1. Normalizar fechas (ignora si usa - o /)
                 const dateA = rowA.fecha.replace(/-/g, '/').trim();
                 const dateB = rowB.fecha.replace(/-/g, '/').trim();
                 
-                // 2. Normalizar descripción (ignora dobles espacios y mayúsculas/minúsculas)
-                const descA = rowA.descripcion.replace(/\s+/g, ' ').trim().toUpperCase();
-                const descB = rowB.descripcion.replace(/\s+/g, ' ').trim().toUpperCase();
+                const descA = normalizeText(rowA.descripcion);
+                const descB = normalizeText(rowB.descripcion);
                 
-                // 3. Normalizar importe (compara números con margen de error para decimales flotantes)
                 const impA = parseFloat(rowA.importe);
                 const impB = parseFloat(rowB.importe);
                 const isImporteSame = Math.abs(impA - impB) < 0.01;
@@ -286,6 +309,7 @@
 
             const processFileContent = (text) => {
                 const currentT = TRANSLATIONS[language]; 
+                setProcessingMethod(null);
 
                 const lines = text.split('\n');
                 const newRows = [];
@@ -309,8 +333,7 @@
                         fecha,
                         descripcion,
                         importe: importe,
-                        // Normalizamos la firma también para consistencia futura
-                        rawSignature: `${fecha}-${descripcion.replace(/\s+/g, ' ').trim()}-${importe.toFixed(2)}`
+                        rawSignature: `${fecha}-${normalizeText(descripcion)}-${importe.toFixed(2)}`
                     });
                 }
 
@@ -332,23 +355,35 @@
                     finalRows = newRows;
                 } 
                 else if (lastSavedSignature) {
-                    // USAMOS LA NUEVA COMPARACIÓN ROBUSTA AQUÍ
+                    // 1. Intento: Busqueda exacta
                     const cutOffIndex = newRows.findIndex(row => isSameRow(row, lastSavedSignature));
 
-                    if (cutOffIndex === -1) {
-                        finalRows = newRows;
-                        // Si es el mismo mes pero no encuentra corte, avisa posible duplicidad
-                        if (currentMonth === lastSavedMonth) {
-                             setStatusMessage({ type: 'warning', text: currentT.msgWarningDup });
+                    if (cutOffIndex !== -1) {
+                        setProcessingMethod('exact');
+                        if (cutOffIndex === 0) {
+                            finalRows = [];
+                            setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
                         } else {
-                             setStatusMessage({ type: 'info', text: currentT.msgNewMonthGeneric });
+                            finalRows = newRows.slice(0, cutOffIndex);
+                            setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
                         }
-                    } else if (cutOffIndex === 0) {
-                        finalRows = [];
-                        setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
                     } else {
-                        finalRows = newRows.slice(0, cutOffIndex);
-                        setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
+                        // 2. Fallback: Filtro NUCLEAR por fecha numérica (Infalible)
+                        setProcessingMethod('date');
+                        const savedDateVal = getDateValue(lastSavedDate);
+                        
+                        finalRows = newRows.filter(row => {
+                            const rowDateVal = getDateValue(row.fecha);
+                            // Solo pasa si la fecha es ESTRICTAMENTE MAYOR a la guardada
+                            return rowDateVal > savedDateVal;
+                        });
+
+                        if (finalRows.length === 0) {
+                             setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
+                        } else {
+                             // Si se usó filtro por fecha, avisamos con un warning amarillo para que el usuario revise
+                             setStatusMessage({ type: 'warning', text: currentT.msgWarningDup });
+                        }
                     }
                 } 
                 else {
@@ -356,17 +391,16 @@
                     setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
                 }
 
-                // ORDENAMIENTO: Asegura orden cronológico (viejo a nuevo)
+                // Ordenar
                 if (finalRows.length > 0) {
                     finalRows.sort((a, b) => parseDate(a.fecha) - parseDate(b.fecha));
                 }
 
                 setProcessedRows(finalRows);
 
+                // Guardar
                 if (newRows.length > 0) {
                     const newestMovement = newRows[0];
-                    // Guardamos si es mes nuevo o si el movimiento más reciente cambió
-                    // Usamos la misma comparación robusta para decidir si guardar
                     if (isNewMonth || !lastSavedSignature || !isSameRow(newestMovement, lastSavedSignature)) {
                         saveToCloud(newestMovement);
                     }
@@ -380,10 +414,7 @@
                     headers.join(','),
                     ...processedRows.map(row => {
                         const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
-                        
-                        // CORRECCIÓN DE FORMATO: MM-DD-YYYY
                         const fechaFormateada = formatDateForOdoo(row.fecha);
-                        
                         return `${fechaFormateada},${descSafe},${row.importe.toFixed(2)}`;
                     })
                 ].join('\n');
@@ -404,7 +435,6 @@
                     {/* Header */}
                     <div className="bg-white p-8 pb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            {/* Titulo con fuente Century Gothic / sans-serif y tamaño aumentado */}
                             <h1 className="text-4xl font-bold text-[#1e293b] tracking-tight" style={{ fontFamily: "'Century Gothic', Futura, sans-serif" }}>
                                 {t.title}
                             </h1>
@@ -415,7 +445,6 @@
                             </p>
                         </div>
                         
-                        {/* Estado de sincronización / Cuadro Rectangular Redondeado (no píldora) */}
                         <div>
                             {isSyncing ? (
                                 <div className="bg-gray-100 text-gray-500 rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-medium animate-pulse">
@@ -497,9 +526,19 @@
                         {/* Preview & Actions */}
                         {processedRows.length > 0 ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            
+                            {/* Método de procesamiento visual */}
+                            {processingMethod && (
+                                <div className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider mb-2 px-1 ${
+                                    processingMethod === 'exact' ? 'text-green-600' : 'text-yellow-600'
+                                }`}>
+                                    {processingMethod === 'exact' ? <ShieldCheck className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
+                                    {processingMethod === 'exact' ? t.msgMethodExact : t.msgMethodDate}
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-center px-1">
                                 <h3 className="font-bold text-gray-700">{t.previewTitle} <span className="text-gray-400 font-normal">({processedRows.length} {t.newItems})</span></h3>
-                                {/* BOTÓN DE DESCARGA ACTUALIZADO: Deshabilitado durante Sync */}
                                 <button 
                                 onClick={downloadCSV}
                                 disabled={isSyncing}
@@ -626,10 +665,24 @@
                             </button>
                             
                             {isSettingsOpen && (
-                                <div className="absolute bottom-full right-0 mb-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                    <div className="p-3 border-b border-gray-100 bg-gray-50">
+                                <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                                         <p className="text-xs font-semibold text-gray-500 uppercase">{t.settingsTitle}</p>
                                     </div>
+                                    
+                                    {/* Muestra Visual de la Memoria */}
+                                    {lastSavedSignature && (
+                                        <div className="px-4 py-3 border-b border-gray-50 bg-blue-50/50">
+                                            <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 flex items-center gap-1">
+                                                <Database className="w-3 h-3" /> {t.memStatus}
+                                            </p>
+                                            <div className="text-xs text-gray-600 font-mono space-y-1">
+                                                <p className="truncate" title={lastSavedSignature.fecha}>{lastSavedSignature.fecha}</p>
+                                                <p className="truncate font-bold">${lastSavedSignature.importe?.toFixed(2)}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button 
                                         onClick={() => {
                                             if (lastSavedDate) setShowDeleteConfirm(true);
