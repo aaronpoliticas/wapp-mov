@@ -21,13 +21,111 @@
 
     <!-- 3. Tu Aplicación React -->
     <script type="text/babel" data-type="module">
-        // Importamos React y Lucide desde un CDN moderno (esm.sh)
-        import React, { useState, useEffect } from 'https://esm.sh/react@18?dev';
+        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18?dev';
         import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
-        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info } from 'https://esm.sh/lucide-react@0.263.1?dev';
+        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe } from 'https://esm.sh/lucide-react@0.263.1?dev';
 
-        // URL de producción de tu Google Apps Script
         const API_URL = "https://script.google.com/macros/s/AKfycbwoLFhMe3lBT9YUBceM8MasNCoEif1ykmR7VmGh02knV32JheqTEisfUAksJghQ63oNHw/exec";
+
+        // --- DICCIONARIO DE TRADUCCIONES ---
+        const TRANSLATIONS = {
+            es: {
+                title: "WAPP - MOV",
+                subtitle: "Procesador de extractos con memoria en la nube",
+                syncing: "Sync...",
+                lastProcessed: "Último procesado:",
+                noData: "Sin datos",
+                settingsTitle: "CONFIGURACIÓN",
+                restartMemory: "Reiniciar memoria",
+                uploadTitle: "Arrastra tu archivo MOV aquí",
+                uploadSubtitle: "o haz clic para buscarlo",
+                previewTitle: "Vista Previa",
+                newItems: "nuevos",
+                downloadBtn: "Descargar CSV",
+                footerSync: "Sincronizado con Google Sheets",
+                
+                // Mensajes de estado
+                msgErrorFile: "Archivo inválido o vacío.",
+                msgMonthChange: "Cambio de mes detectedo. Se procesó información de un mes nuevo.",
+                msgNewMonthGeneric: "Se procesó información de un mes nuevo.",
+                msgUpToDate: "¡Todo al día! No hay movimientos nuevos.",
+                msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
+                msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
+                msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
+                
+                // Modal Borrar
+                modalTitle: "¿Estás segur@ de borrar la memoria?",
+                modalText1: "Tendrás que revisar que después de borrarla,",
+                modalTextBold: "no dupliques los registros en Odoo",
+                modalText2: ". Esta acción no se puede deshacer.",
+                btnCancel: "Cancelar",
+                btnConfirm: "Sí, borrar memoria",
+                msgDeleting: "Borrando memoria en la nube...",
+                msgDeleted: "Memoria reiniciada exitosamente.",
+                msgSaveError: "Error al guardar en la nube.",
+
+                // Instrucciones
+                instrTitle: "Instrucciones de Uso",
+                step1: "Descarga los movimientos de la banca BBVA en formato .txt del día.",
+                step2: "Arrastra el archivo a la sección de carga marcada arriba.",
+                step3: "Si no hay errores, aparecerá un botón verde para descargar el archivo .csv.",
+                step4: "Abre Odoo, entra a Contabilidad y arrastra el archivo al cuadro de la cuenta:",
+                step5part1: "En la ventana emergente oprime",
+                step5btn1: "\"Probar\"",
+                step5part2: ". Si aparece la leyenda",
+                step5msg: "\"Todo parece correcto\"",
+                step5part3: ", oprime",
+                step5btn2: "\"Importar\"",
+            },
+            fr: {
+                title: "WAPP - MOV",
+                subtitle: "Processeur d'extraits bancaires avec mémoire cloud",
+                syncing: "Sync...",
+                lastProcessed: "Dernier traité :",
+                noData: "Aucune donnée",
+                settingsTitle: "PARAMÈTRES",
+                restartMemory: "Réinitialiser la mémoire",
+                uploadTitle: "Glissez votre fichier MOV ici",
+                uploadSubtitle: "ou cliquez pour parcourir",
+                previewTitle: "Aperçu",
+                newItems: "nouveaux",
+                downloadBtn: "Télécharger CSV",
+                footerSync: "Synchronisé avec Google Sheets",
+                
+                // Mensajes de estado
+                msgErrorFile: "Fichier invalide ou vide.",
+                msgMonthChange: "Changement de mois détecté. Informations du nouveau mois traitées.",
+                msgNewMonthGeneric: "Informations d'un nouveau mois traitées.",
+                msgUpToDate: "Tout est à jour ! Aucun nouveau mouvement.",
+                msgNewFound: (count) => `${count} nouveaux mouvements trouvés.`,
+                msgProcessed: (count) => `Fichier traité. ${count} mouvements prêts.`,
+                msgNoNewReport: "Le fichier a été lu mais il n'y a aucun nouveau mouvement à signaler.",
+
+                // Modal Borrar
+                modalTitle: "Êtes-vous sûr de vouloir effacer la mémoire ?",
+                modalText1: "Vous devrez vérifier qu'après l'effacement,",
+                modalTextBold: "vous ne dupliquez pas les enregistrements dans Odoo",
+                modalText2: ". Cette action est irréversible.",
+                btnCancel: "Annuler",
+                btnConfirm: "Oui, effacer la mémoire",
+                msgDeleting: "Effacement de la mémoire dans le cloud...",
+                msgDeleted: "Mémoire réinitialisée avec succès.",
+                msgSaveError: "Erreur lors de l'enregistrement dans le cloud.",
+
+                // Instrucciones
+                instrTitle: "Instructions d'Utilisation",
+                step1: "Téléchargez les mouvements bancaires BBVA au format .txt du jour.",
+                step2: "Glissez le fichier dans la zone de chargement indiquée ci-dessus.",
+                step3: "S'il n'y a pas d'erreur, un bouton vert apparaîtra pour télécharger le fichier .csv.",
+                step4: "Ouvrez Odoo, allez dans Comptabilité et glissez le fichier dans le cadre du compte :",
+                step5part1: "Dans la fenêtre contextuelle, cliquez sur",
+                step5btn1: "\"Tester\"",
+                step5part2: ". Si le message",
+                step5msg: "\"Tout semble correct\"",
+                step5part3: "apparaît, cliquez sur",
+                step5btn2: "\"Importer\"",
+            }
+        };
 
         const App = () => {
             const [processedRows, setProcessedRows] = useState([]);
@@ -36,80 +134,91 @@
             const [statusMessage, setStatusMessage] = useState(null);
             const [fileName, setFileName] = useState("");
             const [isSyncing, setIsSyncing] = useState(false);
+            
+            // Estado para idioma (es por defecto)
+            const [language, setLanguage] = useState('es');
+            const t = TRANSLATIONS[language];
 
-            // --- 1. CARGA INICIAL (Sincronización GET) ---
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+            const settingsRef = useRef(null);
+
+            // --- 1. CARGA INICIAL ---
             useEffect(() => {
                 fetchLastMovement();
+                const handleClickOutside = (event) => {
+                    if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+                        setIsSettingsOpen(false);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
             }, []);
 
             const fetchLastMovement = async () => {
                 setIsSyncing(true);
                 try {
-                const response = await fetch(API_URL);
-                const text = await response.text();
-                
-                let data = null;
-                try {
-                    if (text && text.trim() !== "") {
-                        data = JSON.parse(text);
+                    const response = await fetch(API_URL);
+                    const text = await response.text();
+                    let data = null;
+                    try {
+                        if (text && text.trim() !== "") {
+                            data = JSON.parse(text);
+                        }
+                    } catch (e) {
+                        console.warn("Respuesta no JSON:", text);
                     }
-                } catch (e) {
-                    console.warn("Respuesta no JSON (celda vacía o sucia):", text);
-                }
-                
-                if (data && data.fecha) {
-                    setLastSavedSignature(data);
-                    setLastSavedDate(data.fecha);
-                    console.log("Sincronizado desde nube:", data);
-                } else {
-                    console.log("Sin datos previos en nube.");
-                }
+                    
+                    if (data && data.fecha) {
+                        setLastSavedSignature(data);
+                        setLastSavedDate(data.fecha);
+                    }
                 } catch (error) {
-                console.error("Error GET:", error);
-                setStatusMessage({ type: 'warning', text: 'Sin conexión a Google Sheets. Modo local.' });
+                    setStatusMessage({ type: 'warning', text: 'Sin conexión a Google Sheets. Modo local.' });
                 } finally {
-                setIsSyncing(false);
+                    setIsSyncing(false);
                 }
             };
 
-            // --- 2. GUARDADO EN NUBE (Sincronización POST) ---
+            // --- 2. GUARDADO EN NUBE ---
             const saveToCloud = async (movement) => {
                 setIsSyncing(true);
                 try {
-                const payload = JSON.stringify({ 
-                    ultimoMovimiento: movement ? JSON.stringify(movement) : "" 
-                });
+                    const payload = JSON.stringify({ 
+                        ultimoMovimiento: movement ? JSON.stringify(movement) : "" 
+                    });
 
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: payload
-                });
-                
-                if (movement) {
-                    setLastSavedSignature(movement);
-                    setLastSavedDate(movement.fecha);
-                } else {
-                    setLastSavedSignature(null);
-                    setLastSavedDate(null);
-                }
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: payload
+                    });
+                    
+                    if (movement) {
+                        setLastSavedSignature(movement);
+                        setLastSavedDate(movement.fecha);
+                    } else {
+                        setLastSavedSignature(null);
+                        setLastSavedDate(null);
+                    }
                 } catch (error) {
-                console.error("Error POST:", error);
-                setStatusMessage({ type: 'error', text: 'Error al guardar en la nube.' });
+                    setStatusMessage({ type: 'error', text: t.msgSaveError });
                 } finally {
-                setIsSyncing(false);
+                    setIsSyncing(false);
                 }
             };
 
             const clearMemory = async () => {
+                setShowDeleteConfirm(false);
+                setIsSettingsOpen(false);
                 setProcessedRows([]);
                 setFileName("");
-                setStatusMessage({ type: 'info', text: 'Borrando memoria en la nube...' });
+                setStatusMessage({ type: 'info', text: t.msgDeleting });
                 await saveToCloud(null);
-                setStatusMessage({ type: 'info', text: 'Memoria reiniciada.' });
+                setStatusMessage({ type: 'info', text: t.msgDeleted });
             };
 
-            // --- 3. PROCESAMIENTO DE ARCHIVO ---
+            // --- UTILIDADES DE PARSEO ---
             const parseCurrency = (str) => {
                 if (!str) return 0;
                 const cleanStr = str.replace(/,/g, '').trim();
@@ -117,11 +226,18 @@
                 return isNaN(num) ? 0 : num;
             };
 
+            const parseDate = (dateStr) => {
+                if (!dateStr) return new Date(0);
+                const parts = dateStr.split('/');
+                if (parts.length < 3) return new Date(0);
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            };
+
             const getMonthYear = (dateStr) => {
                 if (!dateStr) return '';
                 const parts = dateStr.split('/');
                 if (parts.length < 3) return '';
-                return `${parts[1]}/${parts[2]}`; // MM/YYYY
+                return `${parts[1]}/${parts[2]}`; 
             };
 
             const handleFileUpload = (event) => {
@@ -134,42 +250,41 @@
                 event.target.value = ''; 
             };
 
+            // --- LÓGICA PRINCIPAL ---
             const processFileContent = (text) => {
+                const currentT = TRANSLATIONS[language]; 
+
                 const lines = text.split('\n');
                 const newRows = [];
-                
                 const startIndex = lines[0].toLowerCase().includes('concepto') ? 1 : 0;
 
                 for (let i = startIndex; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    const columns = line.split('\t');
+                    if (columns.length < 2) continue;
 
-                const columns = line.split('\t');
-                if (columns.length < 2) continue;
+                    const fecha = columns[0].trim();
+                    const descripcion = columns[1].trim();
+                    const cargoStr = columns[2] ? columns[2].trim() : "";
+                    const abonoStr = columns[3] ? columns[3].trim() : "";
+                    const cargo = parseCurrency(cargoStr);
+                    const abono = parseCurrency(abonoStr);
+                    const importe = abono - cargo;
 
-                const fecha = columns[0].trim();
-                const descripcion = columns[1].trim();
-                const cargoStr = columns[2] ? columns[2].trim() : "";
-                const abonoStr = columns[3] ? columns[3].trim() : "";
-
-                const cargo = parseCurrency(cargoStr);
-                const abono = parseCurrency(abonoStr);
-                const importe = abono - cargo;
-
-                newRows.push({
-                    fecha,
-                    descripcion,
-                    importe: importe,
-                    rawSignature: `${fecha}-${descripcion}-${importe}`
-                });
+                    newRows.push({
+                        fecha,
+                        descripcion,
+                        importe: importe,
+                        rawSignature: `${fecha}-${descripcion}-${importe}`
+                    });
                 }
 
                 if (newRows.length === 0) {
-                setStatusMessage({ type: 'error', text: 'Archivo inválido o vacío.' });
-                return;
+                    setStatusMessage({ type: 'error', text: currentT.msgErrorFile });
+                    return;
                 }
 
-                // --- LÓGICA DE DEDUPLICACIÓN ---
                 const currentFileFirstDate = newRows[0].fecha;
                 const currentMonth = getMonthYear(currentFileFirstDate);
                 const lastSavedMonth = getMonthYear(lastSavedDate);
@@ -177,53 +292,53 @@
                 let finalRows = [];
                 let isNewMonth = false;
 
-                // Caso A: Cambio de mes explícito
                 if (lastSavedDate && currentMonth !== lastSavedMonth) {
-                isNewMonth = true;
-                setStatusMessage({ type: 'info', text: `Cambio de mes (${currentMonth}). Se procesó información de un mes nuevo.` });
-                finalRows = newRows;
-                } 
-                // Caso B: Tenemos memoria (posiblemente del mismo mes)
-                else if (lastSavedSignature) {
-                const cutOffIndex = newRows.findIndex(row => row.rawSignature === lastSavedSignature.rawSignature);
-
-                if (cutOffIndex === -1) {
+                    isNewMonth = true;
+                    setStatusMessage({ type: 'info', text: currentT.msgMonthChange });
                     finalRows = newRows;
-                    setStatusMessage({ type: 'info', text: 'Se procesó información de un mes nuevo.' });
-                } else if (cutOffIndex === 0) {
-                    finalRows = [];
-                    setStatusMessage({ type: 'success', text: '¡Todo al día! No hay movimientos nuevos.' });
-                } else {
-                    finalRows = newRows.slice(0, cutOffIndex);
-                    setStatusMessage({ type: 'success', text: `Se encontraron ${finalRows.length} movimientos nuevos.` });
-                }
                 } 
-                // Caso C: Memoria vacía (Primera vez)
+                else if (lastSavedSignature) {
+                    const cutOffIndex = newRows.findIndex(row => row.rawSignature === lastSavedSignature.rawSignature);
+
+                    if (cutOffIndex === -1) {
+                        finalRows = newRows;
+                        setStatusMessage({ type: 'info', text: currentT.msgNewMonthGeneric });
+                    } else if (cutOffIndex === 0) {
+                        finalRows = [];
+                        setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
+                    } else {
+                        finalRows = newRows.slice(0, cutOffIndex);
+                        setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
+                    }
+                } 
                 else {
-                finalRows = newRows;
-                setStatusMessage({ type: 'success', text: `Archivo procesado. ${newRows.length} movimientos listos.` });
+                    finalRows = newRows;
+                    setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
+                }
+
+                if (finalRows.length > 0) {
+                    finalRows.sort((a, b) => parseDate(a.fecha) - parseDate(b.fecha));
                 }
 
                 setProcessedRows(finalRows);
 
                 if (newRows.length > 0) {
-                const newestMovement = newRows[0];
-                if (isNewMonth || !lastSavedSignature || newestMovement.rawSignature !== lastSavedSignature.rawSignature) {
-                    saveToCloud(newestMovement);
-                }
+                    const newestMovement = newRows[0];
+                    if (isNewMonth || !lastSavedSignature || newestMovement.rawSignature !== lastSavedSignature.rawSignature) {
+                        saveToCloud(newestMovement);
+                    }
                 }
             };
 
             const downloadCSV = () => {
                 if (processedRows.length === 0) return;
-
                 const headers = ['FECHA', 'DESCRIPCION', 'IMPORTE'];
                 const csvContent = [
-                headers.join(','),
-                ...processedRows.map(row => {
-                    const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
-                    return `${row.fecha},${descSafe},${row.importe.toFixed(2)}`;
-                })
+                    headers.join(','),
+                    ...processedRows.map(row => {
+                        const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
+                        return `${row.fecha},${descSafe},${row.importe.toFixed(2)}`;
+                    })
                 ].join('\n');
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -238,40 +353,70 @@
 
             return (
                 <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
-                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 relative">
                     
                     {/* Header */}
                     <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <FileText className="w-6 h-6" /> WAPP - MOV
-                        </h1>
-                        <p className="text-blue-100 text-sm mt-1">Procesador de extractos con memoria en la nube</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                        {isSyncing && (
-                            <div className="flex items-center gap-1 text-xs bg-blue-700/50 px-2 py-1 rounded animate-pulse">
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                Sync...
-                            </div>
-                        )}
+                        <div>
+                            <h1 className="text-2xl font-bold flex items-center gap-2">
+                            <FileText className="w-6 h-6" /> {t.title}
+                            </h1>
+                            <p className="text-blue-100 text-sm mt-1">{t.subtitle}</p>
+                        </div>
                         
-                        {lastSavedDate ? (
-                        <div className="text-right text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2">
-                            <div>
-                                <p className="opacity-75">Último procesado:</p>
-                                <p className="font-mono font-bold">{lastSavedDate}</p>
+                        <div className="flex items-center gap-4">
+                            {/* Estado de sincronización */}
+                            {isSyncing ? (
+                                <div className="flex items-center gap-1 text-xs bg-blue-700/50 px-2 py-1 rounded animate-pulse">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    {t.syncing}
+                                </div>
+                            ) : (
+                                lastSavedDate ? (
+                                    <div className="text-right text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2" title="Memoria Sincronizada">
+                                        <div>
+                                            <p className="opacity-75">{t.lastProcessed}</p>
+                                            <p className="font-mono font-bold">{lastSavedDate}</p>
+                                        </div>
+                                        <Cloud className="w-5 h-5 text-blue-200" />
+                                    </div>
+                                ) : (
+                                    <div className="text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2 opacity-75">
+                                        <span>{t.noData}</span>
+                                        <CloudOff className="w-5 h-5" />
+                                    </div>
+                                )
+                            )}
+
+                            {/* Botón de Ajustes */}
+                            <div className="relative" ref={settingsRef}>
+                                <button 
+                                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                                    className="p-2 hover:bg-blue-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                                >
+                                    <Settings className="w-6 h-6 text-white" />
+                                </button>
+                                
+                                {isSettingsOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-3 border-b border-gray-100 bg-gray-50">
+                                            <p className="text-xs font-semibold text-gray-500 uppercase">{t.settingsTitle}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                if (lastSavedDate) setShowDeleteConfirm(true);
+                                                setIsSettingsOpen(false);
+                                            }}
+                                            disabled={!lastSavedDate || isSyncing}
+                                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            {t.restartMemory}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                            <Cloud className="w-5 h-5 text-blue-200" />
                         </div>
-                        ) : (
-                        !isSyncing && <div className="text-xs bg-blue-700 p-2 rounded-lg flex items-center gap-2 opacity-75">
-                            <span>Sin datos</span>
-                            <CloudOff className="w-5 h-5" />
-                        </div>
-                        )}
-                    </div>
                     </div>
 
                     {/* Main Content */}
@@ -311,10 +456,10 @@
                         </div>
                         <div>
                             <p className="text-lg font-medium text-gray-700">
-                            {fileName ? fileName : "Arrastra tu archivo MOV aquí"}
+                                {fileName ? fileName : t.uploadTitle}
                             </p>
                             <p className="text-sm text-gray-400 mt-1">
-                                {isSyncing ? "Sincronizando..." : "o haz clic para buscarlo"}
+                                {isSyncing ? t.syncing : t.uploadSubtitle}
                             </p>
                         </div>
                         </div>
@@ -324,13 +469,13 @@
                     {processedRows.length > 0 ? (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-gray-700">Vista Previa ({processedRows.length} nuevos)</h3>
+                            <h3 className="font-bold text-gray-700">{t.previewTitle} ({processedRows.length} {t.newItems})</h3>
                             <button 
                             onClick={downloadCSV}
                             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all hover:shadow-md active:scale-95"
                             >
                             <FileDown className="w-5 h-5" />
-                            Descargar CSV
+                            {t.downloadBtn}
                             </button>
                         </div>
 
@@ -360,37 +505,118 @@
                     ) : (
                         fileName && processedRows.length === 0 && statusMessage?.type !== 'error' && (
                             <div className="text-center py-4 text-gray-600 font-bold">
-                            El archivo se leyó pero no hay movimientos nuevos que reportar.
+                                {t.msgNoNewReport}
                             </div>
                         )
                     )}
 
-                    {/* Footer / Reset Memory */}
-                    <div className="pt-6 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
-                        <p className="flex items-center gap-2">
-                            <Cloud className="w-4 h-4" />
-                            Sincronizado con Google Sheets
+                    {/* SECCIÓN DE INSTRUCCIONES + SELECTOR DE IDIOMA REDISEÑADO */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm relative mt-4">
+                        
+                        {/* Selector de Idiomas Nuevo Diseño */}
+                        <div className="absolute top-6 right-6 flex flex-col items-end gap-1.5">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                                <Globe className="w-3 h-3" />
+                                Lenguaje / Langue
+                            </span>
+                            <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                                <button 
+                                    onClick={() => setLanguage('es')} 
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${
+                                        language === 'es' 
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-100 shadow-sm ring-1 ring-blue-100' 
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                    }`}
+                                >
+                                    <span className="text-base leading-none">🇲🇽</span>
+                                    Español
+                                </button>
+                                <div className="w-px bg-slate-100 my-1 mx-0.5"></div>
+                                <button 
+                                    onClick={() => setLanguage('fr')} 
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${
+                                        language === 'fr' 
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-100 shadow-sm ring-1 ring-blue-100' 
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                    }`}
+                                >
+                                    <span className="text-base leading-none">🇫🇷</span>
+                                    Français
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-200 pb-2 pt-1">
+                            <ClipboardList className="w-5 h-5 text-blue-600" />
+                            {t.instrTitle}
+                        </h3>
+                        <ol className="space-y-3 text-sm text-slate-600 list-decimal list-inside marker:text-blue-600 marker:font-bold pr-4 sm:pr-48">
+                            <li>
+                                {t.step1} <span className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-xs text-blue-600">.txt</span>
+                            </li>
+                            <li>
+                                {t.step2}
+                            </li>
+                            <li>
+                                {t.step3} <span className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-xs text-green-600">.csv</span>
+                            </li>
+                            <li>
+                                {t.step4}
+                                <div className="mt-1.5 ml-5 inline-block bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-md font-mono text-xs font-bold">
+                                    BBVA - 012180001206755710
+                                </div>
+                            </li>
+                            <li>
+                                {t.step5part1} <span className="font-semibold text-blue-600">{t.step5btn1}</span>. {t.step5part2} <em>{t.step5msg}</em>, {t.step5part3} <span className="font-bold text-green-600">{t.step5btn2}</span>.
+                            </li>
+                        </ol>
+                    </div>
+
+                    {/* Footer Simple */}
+                    <div className="pt-2 border-t border-gray-100 flex justify-center text-sm text-gray-400">
+                        <p className="flex items-center gap-2 text-xs">
+                            <Cloud className="w-3 h-3" />
+                            {t.footerSync}
                         </p>
-                        {(lastSavedDate) && (
-                        <button 
-                            onClick={clearMemory}
-                            disabled={isSyncing}
-                            className="flex items-center gap-1 text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                            title="Borrar memoria en la nube"
-                        >
-                            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                            Reiniciar memoria
-                        </button>
-                        )}
                     </div>
 
                     </div>
+                    
+                    {/* Modal de Confirmación */}
+                    {showDeleteConfirm && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+                                <div className="p-6 text-center">
+                                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <AlertTriangle className="w-8 h-8 text-red-600" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t.modalTitle}</h3>
+                                    <p className="text-gray-600 mb-6">
+                                        {t.modalText1} <span className="font-bold text-red-600">{t.modalTextBold}</span>{t.modalText2}
+                                    </p>
+                                    <div className="flex gap-3 justify-center">
+                                        <button 
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            {t.btnCancel}
+                                        </button>
+                                        <button 
+                                            onClick={clearMemory}
+                                            className="px-5 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 shadow-lg shadow-red-200 transition-all hover:scale-105"
+                                        >
+                                            {t.btnConfirm}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 </div>
             );
         };
 
-        // Renderizado
         const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
