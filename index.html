@@ -230,16 +230,24 @@
                 return isNaN(num) ? 0 : num;
             };
 
+            // CORRECCIÓN AQUÍ: Soporte robusto para guiones (-) y diagonales (/)
             const parseDate = (dateStr) => {
                 if (!dateStr) return new Date(0);
-                const parts = dateStr.split('/');
+                
+                // Reemplazamos guiones por diagonales para estandarizar
+                const cleanDate = dateStr.trim().replace(/-/g, '/');
+                const parts = cleanDate.split('/');
+                
                 if (parts.length < 3) return new Date(0);
+                
+                // Se asume formato DD/MM/YYYY
+                // new Date(year, monthIndex, day)
                 return new Date(parts[2], parts[1] - 1, parts[0]);
             };
 
             const getMonthYear = (dateStr) => {
                 if (!dateStr) return '';
-                const parts = dateStr.split('/');
+                const parts = dateStr.split(/[\/\-]/); // También soporta ambos aquí
                 if (parts.length < 3) return '';
                 return `${parts[1]}/${parts[2]}`; 
             };
@@ -319,6 +327,7 @@
                     setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
                 }
 
+                // ORDENAMIENTO: Asegura orden cronológico (viejo a nuevo)
                 if (finalRows.length > 0) {
                     finalRows.sort((a, b) => parseDate(a.fecha) - parseDate(b.fecha));
                 }
@@ -455,11 +464,17 @@
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="flex justify-between items-center px-1">
                                 <h3 className="font-bold text-gray-700">{t.previewTitle} <span className="text-gray-400 font-normal">({processedRows.length} {t.newItems})</span></h3>
+                                {/* BOTÓN DE DESCARGA ACTUALIZADO: Deshabilitado durante Sync */}
                                 <button 
                                 onClick={downloadCSV}
-                                className="bg-[#714B67] hover:bg-[#5a3b52] text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-purple-900/10 transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                disabled={isSyncing}
+                                className={`bg-[#714B67] text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-purple-900/10 transition-all ${
+                                    isSyncing 
+                                    ? 'opacity-70 cursor-wait' 
+                                    : 'hover:bg-[#5a3b52] hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95'
+                                }`}
                                 >
-                                <FileDown className="w-5 h-5" />
+                                {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
                                 {t.downloadBtn}
                                 </button>
                             </div>
