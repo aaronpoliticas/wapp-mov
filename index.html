@@ -2,753 +2,879 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SSC | Conversor MOV BBVA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SSC Analytics Dashboard</title>
     
-    <!-- 1. Tailwind CSS para los estilos -->
+    <!-- FUENTES -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Antonio:wght@700&display=swap" rel="stylesheet">
+
+    <!-- TAILWIND CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. Babel para traducir React en el navegador -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Antonio', 'sans-serif'],
+                    },
+                    colors: {
+                        ssc: {
+                            primary: '#FF8A00',
+                            secondary: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- BABEL -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Estilos para animaciones simples -->
+    <!-- LIBRERÍAS EXTERNAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- IMPORT MAP -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom": "https://esm.sh/react-dom@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
+            "lucide-react": "https://esm.sh/lucide-react@0.330.0?external=react"
+        }
+    }
+    </script>
+
     <style>
-        .cursor-wait { cursor: wait; }
+        body { background-color: #F5F6F7; -webkit-font-smoothing: antialiased; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 20px; }
+        .animate-in { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-[#F3F4F6] min-h-screen flex items-center justify-center py-10 px-4 font-sans">
-    <div id="root" class="w-full max-w-3xl"></div>
+<body>
+    <div id="root"></div>
 
-    <!-- 3. Tu Aplicación React -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18?dev';
-        import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
-        import { Upload, FileDown, Trash2, CheckCircle, AlertCircle, FileText, Cloud, CloudOff, Loader2, Info, Settings, AlertTriangle, X, ClipboardList, Globe, Database, ShieldCheck, Filter, ListOrdered } from 'https://esm.sh/lucide-react@0.263.1?dev';
+        import React, { useState, useMemo, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+            AreaChart, Area, PieChart, Pie, Cell 
+        } from 'recharts';
+        import { 
+            LayoutDashboard, MapPin, Coffee, ArrowUpRight, ArrowDownRight, DollarSign, Weight, 
+            Activity, Calendar, FileText, AlertCircle, Zap, Filter, Layers, Info, Map as MapIcon, 
+            ChevronDown, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, Building2, Briefcase, 
+            Search, Download, Menu, X, Cloud
+        } from 'lucide-react';
 
-        const API_URL = "https://script.google.com/macros/s/AKfycbwoLFhMe3lBT9YUBceM8MasNCoEif1ykmR7VmGh02knV32JheqTEisfUAksJghQ63oNHw/exec";
+        // --- URL DE DATOS EN VIVO (GOOGLE SHEETS) ---
+        const DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7LJkskJwCnKBAFND_9a_vjbgDwG3CWyhk6EONfnvVFC0J9E2962Bn0g-bSrIcYBSbPYke11EFKtjF/pub?gid=0&single=true&output=csv";
 
-        // --- DICCIONARIO DE TRADUCCIONES ACTUALIZADO ---
-        const TRANSLATIONS = {
-            es: {
-                title: "Conversor MOV",
-                subtitlePre: "Preparación de archivos ",
-                subtitleUnderline: "MOV BBVA",
-                subtitlePost: " para importación en Odoo.",
-                syncing: "Sinc...",
-                lastProcessed: "Fecha del último movimiento:", // Actualizado
-                lastProcessedSub: "Último mov procesado el:", // Nuevo
-                noData: "Sin datos",
-                settingsTitle: "CONFIGURACIÓN",
-                memStatus: "Memoria Actual:",
-                restartMemory: "Reiniciar memoria",
-                uploadTitle: "Arrastra tu archivo MOV aquí",
-                uploadSubtitle: "o haz clic para buscarlo",
-                chooseFileBtn: "Elegir Archivo",
-                previewTitle: "Vista Previa",
-                newItems: "nuevos",
-                downloadBtn: "Descargar CSV para Odoo",
-                footerText: "SSC GOURMET DISTRIBUTION 2026",
-                
-                // Mensajes de estado
-                msgErrorFile: "Archivo inválido o vacío.",
-                msgMonthChange: "Cambio de mes detectado. Se procesó información de un mes nuevo.",
-                msgNewMonthGeneric: "Se procesó información de un mes nuevo.",
-                msgUpToDate: "¡Todo al día! No hay movimientos nuevos.",
-                msgNewFound: (count) => `Se encontraron ${count} movimientos nuevos.`,
-                msgProcessed: (count) => `Archivo procesado. ${count} movimientos listos.`,
-                msgNoNewReport: "El archivo se leyó pero no hay movimientos nuevos que reportar.",
-                msgWarningDup: "Corte exacto no encontrado. Se filtraron automáticamente fechas anteriores.",
-                msgMethodExact: "Corte Exacto (Orden Original)",
-                msgMethodDate: "Filtrado por Fecha (Seguridad)",
-                
-                // Modal Borrar
-                modalTitle: "¿Estás segur@ de borrar la memoria?",
-                modalText1: "Tendrás que revisar que después de borrarla,",
-                modalTextBold: "no dupliques los registros en Odoo",
-                modalText2: ". Esta acción no se puede deshacer.",
-                btnCancel: "Cancelar",
-                btnConfirm: "Sí, borrar memoria",
-                msgDeleting: "Borrando memoria en la nube...",
-                msgDeleted: "Memoria reiniciada exitosamente.",
-                msgSaveError: "Error al guardar en la nube.",
-
-                // Instrucciones (Actualizadas)
-                instrTitle: "Instrucciones de Uso",
-                step1: "Descarga los movimientos de la banca BBVA en formato .txt del día",
-                step2: "Arrastra y suelta en esta página el archivo o selecciona \"Elegir\"",
-                step3: "Si no hay errores, aparecerá un botón morado para descargar el archivo .csv",
-                step4: "Abre Odoo entra a Contabilidad y arrastra el archivo .csv al cuadro de la cuenta:",
-                step5part1: "En la ventana emergente oprime",
-                step5btn1: "\"Probar\"",
-                step5part2: "Si aparece la leyenda",
-                step5msg: "\"Todo parece correcto\"",
-                step5part3: "oprime",
-                step5btn2: "\"Importar\"",
-                langLabel: "LENGUAJE / LANGUE"
-            },
-            fr: {
-                title: "Convertisseur MOV",
-                subtitlePre: "Préparation des fichiers ",
-                subtitleUnderline: "MOV BBVA",
-                subtitlePost: " pour l'importation dans Odoo.",
-                syncing: "Sync...",
-                lastProcessed: "Date du dernier mouvement :", // Actualizado
-                lastProcessedSub: "Dernier mov traité le :", // Nuevo
-                noData: "Aucune donnée",
-                settingsTitle: "PARAMÈTRES",
-                memStatus: "Mémoire Actuelle :",
-                restartMemory: "Réinitialiser la mémoire",
-                uploadTitle: "Glissez votre fichier MOV ici",
-                uploadSubtitle: "ou cliquez pour parcourir",
-                chooseFileBtn: "Choisir le fichier",
-                previewTitle: "Aperçu",
-                newItems: "nouveaux",
-                downloadBtn: "Télécharger CSV pour Odoo",
-                footerText: "SSC GOURMET DISTRIBUTION 2026",
-                
-                // Mensajes de estado
-                msgErrorFile: "Fichier invalide ou vide.",
-                msgMonthChange: "Changement de mois détecté. Traitement du nouveau mois.",
-                msgNewMonthGeneric: "Informations d'un nouveau mois traitées.",
-                msgUpToDate: "Tout est à jour ! Aucun nouveau mouvement.",
-                msgNewFound: (count) => `${count} nouveaux mouvements trouvés.`,
-                msgProcessed: (count) => `Fichier traité. ${count} mouvements prêts.`,
-                msgNoNewReport: "Le fichier a été lu mais il n'y a aucun nouveau mouvement à signaler.",
-                msgWarningDup: "Point d'arrêt exact non trouvé. Filtre strict par date appliqué.",
-                msgMethodExact: "Point d'arrêt exact trouvé",
-                msgMethodDate: "Filtré par Date (Sécurité)",
-
-                // Modal Borrar
-                modalTitle: "Êtes-vous sûr de vouloir effacer la mémoire ?",
-                modalText1: "Vous devrez vérifier qu'après l'effacement,",
-                modalTextBold: "vous ne dupliquez pas les enregistrements dans Odoo",
-                modalText2: ". Cette action est irréversible.",
-                btnCancel: "Annuler",
-                btnConfirm: "Oui, effacer la mémoire",
-                msgDeleting: "Effacement de la mémoire dans le cloud...",
-                msgDeleted: "Mémoire réinitialisée avec succès.",
-                msgSaveError: "Erreur lors de l'enregistrement dans le cloud.",
-
-                // Instrucciones (Actualizadas)
-                instrTitle: "Instructions d'Utilisation",
-                step1: "Téléchargez les mouvements bancaires BBVA au format .txt du jour",
-                step2: "Glissez et déposez le fichier sur cette page ou sélectionnez \"Choisir\"",
-                step3: "S'il n'y a pas d'erreur, un bouton violet apparaîtra pour télécharger le fichier .csv",
-                step4: "Ouvrez Odoo, allez dans Comptabilité et glissez le fichier .csv dans le cadre du compte :",
-                step5part1: "Dans la fenêtre contextuelle cliquez sur",
-                step5btn1: "\"Probar\"",
-                step5part2: "Si le message",
-                step5msg: "\"Todo parece correcto\"",
-                step5part3: "apparaît cliquez sur",
-                step5btn2: "\"Importar\"",
-                langLabel: "LENGUAJE / LANGUE"
+        // --- SISTEMA DE DISEÑO ---
+        const THEME = {
+            bg: 'bg-[#F5F6F7]',       
+            card: 'bg-[#FFFFFF]',     
+            border: 'border-[#E6E8EB]',
+            text: 'text-[#1F2933]',   
+            subtext: 'text-[#6B7280]', 
+            accent: 'text-[#FF8A00]', 
+            gradient: 'from-[#FF8A00] to-[#FF5E00]',
+            colors: {
+                primary: '#FF8A00',     
+                secondary: '#1e3a8a',   
+                tertiary: '#F59E0B',    
+                quaternary: '#FDBA74',  
+                slate: '#9CA3AF',
+                forecast: '#EF4444',    
+                stacks: ['#FF8A00', '#1e3a8a', '#F59E0B', '#EF4444', '#8B5CF6', '#10B981'] 
             }
         };
 
-        const App = () => {
-            const [processedRows, setProcessedRows] = useState([]);
-            const [lastSavedSignature, setLastSavedSignature] = useState(null);
-            const [lastSavedDate, setLastSavedDate] = useState(null);
-            const [lastProcessedTime, setLastProcessedTime] = useState(null); // Nuevo estado para la hora
-            const [statusMessage, setStatusMessage] = useState(null);
-            const [processingMethod, setProcessingMethod] = useState(null); 
-            const [fileName, setFileName] = useState("");
-            const [isSyncing, setIsSyncing] = useState(false);
+        const CITY_COORDINATES = {
+            'MONTERREY': { top: 25, left: 48, label: 'Monterrey' },
+            'GUADALAJARA': { top: 55, left: 38, label: 'Guadalajara' },
+            'VALLARTA': { top: 58, left: 34, label: 'Vallarta' },
+            'GUANAJUATO': { top: 50, left: 42, label: 'Bajío' },
+            'QUERETARO': { top: 53, left: 44, label: 'Querétaro' },
+            'CDMX': { top: 60, left: 48, label: 'CDMX' },
+            'METEPEC': { top: 62, left: 47, label: 'Toluca' },
+            'MERIDA': { top: 40, left: 82, label: 'Mérida' },
+            'CANCUN': { top: 42, left: 88, label: 'Cancún' },
+        };
+
+        const BRANCH_MAPPING = {
+            'Mayson Kayser - Polanquito': 'CDMX',
+            'Mera - Aeropuerto Guanajuato (Bajio)': 'GUANAJUATO',
+            'Mera - Aeropuerto Cancún T2': 'CANCUN',
+            'Mayson Kayser - Virreyes': 'CDMX',
+            'Mayson Kayser - Mifel (Mazaryk)': 'CDMX',
+            'Mera - Mérida': 'MERIDA',
+            'Mayson Kayser - Metepec': 'METEPEC',
+            'Mera - Aeropuerto Guadalajara': 'GUADALAJARA',
+            'Mera - Cancún T4': 'CANCUN',
+            'Mera - Aeropuerto Monterrey': 'MONTERREY',
+            'Carmela & Sal': 'CDMX',
+            'Mayson Kayser - Hospital Angeles Querétaro': 'QUERETARO',
+            'Mera - Aeropuerto Vallarta': 'VALLARTA',
+            'Mayson Kayser - Homero': 'CDMX', 
+            'Mayson Kayser - Arcos Bosques': 'CDMX'
+        };
+
+        // --- ALGORITMOS ---
+        const calculateHoltWinters = (data, seasonLength = 12, alpha = 0.2, beta = 0.1, gamma = 0.1, forecastLength = 12) => {
+            if (!data || data.length === 0) return Array(forecastLength).fill(0);
+            if (data.length < seasonLength * 2) {
+                const growth = data.length > 12 ? (data[data.length-1] - data[0]) / data.length : 0.05;
+                const lastVal = data[data.length - 1] || 0;
+                return Array.from({length: forecastLength}, (_, i) => lastVal * (1 + growth * (i+1)));
+            }
+            let seasonals = {};
+            let seasonalAvg = Array.from({length: seasonLength}, () => 0);
+            const dataAvg = data.reduce((a,b)=>a+b,0)/data.length;
+            for (let i = 0; i < seasonLength; i++) {
+                seasonalAvg[i] = (data[i] + data[i + seasonLength]) / 2;
+                seasonals[i] = seasonalAvg[i] - dataAvg;
+            }
+            let level = data[seasonLength-1]; 
+            let trend = (data[seasonLength-1] - data[0]) / seasonLength; 
             
-            const [language, setLanguage] = useState('es');
-            const t = TRANSLATIONS[language];
+            for (let i = seasonLength; i < data.length; i++) {
+                const val = data[i];
+                const lastLevel = level;
+                const seasonIdx = i % seasonLength;
+                level = alpha * (val - seasonals[seasonIdx]) + (1 - alpha) * (lastLevel + trend);
+                trend = beta * (level - lastLevel) + (1 - beta) * trend;
+                seasonals[seasonIdx] = gamma * (val - level) + (1 - gamma) * seasonals[seasonIdx];
+            }
+            const forecast = [];
+            for (let i = 1; i <= forecastLength; i++) {
+                const seasonIdx = (data.length + i - 1) % seasonLength;
+                const val = level + (trend * i) + seasonals[seasonIdx];
+                forecast.push(val > 0 ? val : 0);
+            }
+            return forecast;
+        };
 
-            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-            const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-            const settingsRef = useRef(null);
+        // --- HELPERS SEGUROS ---
+        const formatCurrency = (val) => {
+            if (val === undefined || val === null || isNaN(val)) return '$0';
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(val);
+        };
+        const formatNumber = (val) => {
+            if (val === undefined || val === null || isNaN(val)) return '0';
+            return new Intl.NumberFormat('es-MX').format(val);
+        };
 
-            useEffect(() => {
-                fetchLastMovement();
-                const handleClickOutside = (event) => {
-                    if (settingsRef.current && !settingsRef.current.contains(event.target)) {
-                        setIsSettingsOpen(false);
-                    }
-                };
-                document.addEventListener("mousedown", handleClickOutside);
-                return () => document.removeEventListener("mousedown", handleClickOutside);
-            }, []);
-
-            const fetchLastMovement = async () => {
-                setIsSyncing(true);
-                try {
-                    const response = await fetch(API_URL);
-                    const text = await response.text();
-                    let data = null;
-                    try {
-                        if (text && text.trim() !== "") {
-                            data = JSON.parse(text);
-                        }
-                    } catch (e) {
-                        console.warn("Respuesta no JSON:", text);
-                    }
-                    
-                    if (data && data.fecha) {
-                        setLastSavedSignature(data);
-                        setLastSavedDate(data.fecha);
-                        // Si existe la propiedad timestamp la usamos, si no, null
-                        if (data.timestamp) setLastProcessedTime(data.timestamp);
-                    }
-                } catch (error) {
-                    setStatusMessage({ type: 'warning', text: 'Sin conexión a Google Sheets. Modo local.' });
-                } finally {
-                    setIsSyncing(false);
-                }
-            };
-
-            const saveToCloud = async (movement) => {
-                setIsSyncing(true);
-                try {
-                    // Generamos timestamp actual
-                    const now = new Date();
-                    const timestamp = now.toLocaleString(language === 'es' ? 'es-MX' : 'fr-FR');
-                    
-                    const movementWithTime = { ...movement, timestamp }; // Añadimos timestamp al objeto
-
-                    const payload = JSON.stringify({ 
-                        ultimoMovimiento: movement ? JSON.stringify(movementWithTime) : "" 
-                    });
-
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: payload
-                    });
-                    
-                    if (movement) {
-                        setLastSavedSignature(movement);
-                        setLastSavedDate(movement.fecha);
-                        setLastProcessedTime(timestamp);
-                    } else {
-                        setLastSavedSignature(null);
-                        setLastSavedDate(null);
-                        setLastProcessedTime(null);
-                    }
-                } catch (error) {
-                    setStatusMessage({ type: 'error', text: t.msgSaveError });
-                } finally {
-                    setIsSyncing(false);
-                }
-            };
-
-            const clearMemory = async () => {
-                setShowDeleteConfirm(false);
-                setIsSettingsOpen(false);
-                setProcessedRows([]);
-                setFileName("");
-                setProcessingMethod(null);
-                setStatusMessage({ type: 'info', text: t.msgDeleting });
-                await saveToCloud(null);
-                setStatusMessage({ type: 'info', text: t.msgDeleted });
-            };
-
-            const parseCurrency = (str) => {
-                if (!str) return 0;
-                const cleanStr = str.replace(/,/g, '').trim();
-                const num = parseFloat(cleanStr);
-                return isNaN(num) ? 0 : num;
-            };
-
-            const getDateValue = (dateStr) => {
-                if (!dateStr) return 0;
-                const cleanDate = dateStr.trim().replace(/-/g, '/');
-                const parts = cleanDate.split('/');
-                if (parts.length < 3) return 0;
-                // YYYYMMDD para comparación entera
-                return parseInt(`${parts[2]}${parts[1].padStart(2,'0')}${parts[0].padStart(2,'0')}`);
-            };
-
-            const parseDate = (dateStr) => {
-                if (!dateStr) return new Date(0);
-                const cleanDate = dateStr.trim().replace(/-/g, '/');
-                const parts = cleanDate.split('/');
-                if (parts.length < 3) return new Date(0);
-                return new Date(parts[2], parts[1] - 1, parts[0]);
-            };
-
-            const formatDateForOdoo = (dateStr) => {
-                const parts = dateStr.split(/[\/\-]/);
-                if (parts.length < 3) return dateStr; 
-                return `${parts[1]}-${parts[0]}-${parts[2]}`;
-            };
-
-            const getMonthYear = (dateStr) => {
-                if (!dateStr) return '';
-                const parts = dateStr.split(/[\/\-]/); 
-                if (parts.length < 3) return '';
-                return `${parts[1]}/${parts[2]}`; 
-            };
-
-            const normalizeText = (text) => {
-                if (!text) return "";
-                return text
-                    .toUpperCase()
-                    .replace(/[ÁÉÍÓÚ]/g, (c) => ({'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U'}[c])) 
-                    .replace(/[^A-Z0-9]/g, ''); 
-            };
-
-            const isSameRow = (rowA, rowB) => {
-                if (!rowA || !rowB) return false;
-                const valA = getDateValue(rowA.fecha);
-                const valB = getDateValue(rowB.fecha);
-                const descA = normalizeText(rowA.descripcion);
-                const descB = normalizeText(rowB.descripcion);
-                const impA = parseFloat(rowA.importe);
-                const impB = parseFloat(rowB.importe);
-                const isImporteSame = Math.abs(impA - impB) < 0.01;
-                return valA === valB && descA === descB && isImporteSame;
-            };
-
-            const handleFileUpload = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                setFileName(file.name);
-                const reader = new FileReader();
-                reader.onload = (e) => processFileContent(e.target.result);
-                reader.readAsText(file);
-                event.target.value = ''; 
-            };
-
-            // --- LÓGICA MAESTRA ---
-            const processFileContent = (text) => {
-                const currentT = TRANSLATIONS[language]; 
-                setProcessingMethod(null);
-
-                const lines = text.split('\n');
-                let newRows = [];
-                const startIndex = lines[0].toLowerCase().includes('concepto') ? 1 : 0;
-
-                for (let i = startIndex; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    const columns = line.split('\t');
-                    if (columns.length < 2) continue;
-
-                    const fecha = columns[0].trim();
-                    const descripcion = columns[1].trim();
-                    const cargoStr = columns[2] ? columns[2].trim() : "";
-                    const abonoStr = columns[3] ? columns[3].trim() : "";
-                    const cargo = parseCurrency(cargoStr);
-                    const abono = parseCurrency(abonoStr);
-                    const importe = abono - cargo;
-
-                    newRows.push({
-                        fecha,
-                        descripcion,
-                        importe: importe,
-                        rawSignature: `${fecha}-${normalizeText(descripcion)}-${importe.toFixed(2)}`
-                    });
-                }
-
-                if (newRows.length === 0) {
-                    setStatusMessage({ type: 'error', text: currentT.msgErrorFile });
-                    return;
-                }
-
-                // --- NO ORDENAR AQUÍ: Mantenemos orden original ---
-                // Asumimos que el banco entrega los más recientes ARRIBA.
-                
-                const currentFileFirstDate = newRows[0].fecha; 
-                const currentMonth = getMonthYear(currentFileFirstDate);
-                const lastSavedMonth = getMonthYear(lastSavedDate);
-
-                let finalRows = [];
-                let isNewMonth = false;
-
-                if (lastSavedDate && currentMonth !== lastSavedMonth) {
-                    isNewMonth = true;
-                    setStatusMessage({ type: 'info', text: currentT.msgMonthChange });
-                    finalRows = newRows;
-                } 
-                else if (lastSavedSignature) {
-                    // Buscar coincidencia en el orden original (asumiendo que los nuevos están arriba)
-                    // Buscamos el primer match desde arriba. Todo lo de arriba es nuevo.
-                    const cutOffIndex = newRows.findIndex(row => isSameRow(row, lastSavedSignature));
-
-                    if (cutOffIndex !== -1) {
-                        setProcessingMethod('exact');
-                        // Tomamos lo que está ARRIBA del corte
-                        if (cutOffIndex === 0) {
-                            finalRows = [];
-                            setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
-                        } else {
-                            finalRows = newRows.slice(0, cutOffIndex);
-                            setStatusMessage({ type: 'success', text: currentT.msgNewFound(finalRows.length) });
-                        }
-                    } else {
-                        // Fallback: Filtro de fecha
-                        setProcessingMethod('date');
-                        const savedDateVal = getDateValue(lastSavedDate);
-                        
-                        finalRows = newRows.filter(row => {
-                            const rowDateVal = getDateValue(row.fecha);
-                            return rowDateVal > savedDateVal;
-                        });
-
-                        if (finalRows.length === 0) {
-                             setStatusMessage({ type: 'success', text: currentT.msgUpToDate });
-                        } else {
-                             setStatusMessage({ type: 'warning', text: currentT.msgWarningDup });
-                        }
-                    }
-                } 
-                else {
-                    finalRows = newRows;
-                    setStatusMessage({ type: 'success', text: currentT.msgProcessed(newRows.length) });
-                }
-
-                setProcessedRows(finalRows);
-
-                // --- 4. GUARDAR MEMORIA ---
-                // Guardamos el PRIMER elemento del archivo original (el más reciente)
-                if (newRows.length > 0) {
-                    const newestMovement = newRows[0]; 
-                    
-                    if (isNewMonth || !lastSavedSignature || !isSameRow(newestMovement, lastSavedSignature)) {
-                        saveToCloud(newestMovement);
-                    }
-                }
-            };
-
-            const downloadCSV = () => {
-                if (processedRows.length === 0) return;
-                
-                // CLONAR y ORDENAR para el CSV final: De Viejo a Nuevo
-                const sortedForExport = [...processedRows].sort((a, b) => getDateValue(a.fecha) - getDateValue(b.fecha));
-
-                const headers = ['FECHA', 'DESCRIPCION', 'IMPORTE'];
-                const csvContent = [
-                    headers.join(','),
-                    ...sortedForExport.map(row => {
-                        const descSafe = `"${row.descripcion.replace(/"/g, '""')}"`; 
-                        const fechaFormateada = formatDateForOdoo(row.fecha);
-                        return `${fechaFormateada},${descSafe},${row.importe.toFixed(2)}`;
-                    })
-                ].join('\n');
-
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', `movimientos_procesados_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
-
-            return (
-                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full relative">
-                    
-                    {/* Header */}
-                    <div className="bg-white p-8 pb-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h1 className="text-4xl font-bold text-[#1e293b] tracking-tight" style={{ fontFamily: "'Century Gothic', Futura, sans-serif" }}>
-                                {t.title}
-                            </h1>
-                            <p className="text-gray-500 text-sm mt-2">
-                                {t.subtitlePre}
-                                <span className="underline decoration-1 underline-offset-2 decoration-gray-400">{t.subtitleUnderline}</span>
-                                {t.subtitlePost}
-                            </p>
-                        </div>
-                        
-                        <div>
-                            {isSyncing ? (
-                                <div className="bg-gray-100 text-gray-500 rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-medium animate-pulse">
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    {t.syncing}
-                                </div>
-                            ) : (
-                                <div className={`rounded-xl px-4 py-3 flex flex-col items-end gap-1 text-xs font-medium ${lastSavedDate ? 'bg-[#F3F4F6] text-gray-600 border border-gray-200' : 'bg-gray-100 text-gray-400'}`}>
-                                    {lastSavedDate ? (
-                                        <>
-                                            <div className="flex items-center gap-2">
-                                                <span className="opacity-70 uppercase tracking-wide text-[10px]">{t.lastProcessed}</span>
-                                                <span className="font-mono font-bold text-gray-800 text-sm">{lastSavedDate}</span>
-                                                <Cloud className="w-4 h-4 text-blue-400" />
-                                            </div>
-                                            {lastProcessedTime && (
-                                                <div className="text-[10px] text-gray-400 text-right w-full border-t border-gray-200 pt-1 mt-0.5">
-                                                    {t.lastProcessedSub} <span className="font-mono">{lastProcessedTime}</span>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <span>{t.noData}</span>
-                                            <CloudOff className="w-4 h-4" />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+        // --- COMPONENTES UI ---
+        const KPICard = ({ title, value, subValue, icon: Icon, trend, trendValue, isForecast }) => (
+            <div className={`${THEME.card} border ${isForecast ? 'border-red-200 bg-red-50/30' : THEME.border} rounded-xl p-5 shadow-sm hover:shadow-md transition-all h-full relative overflow-hidden group`}>
+                <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-slate-800`}>
+                    <Icon size={80} />
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2.5 rounded-lg ${isForecast ? 'bg-red-100 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
+                        <Icon size={20} />
                     </div>
-
-                    {/* Main Content */}
-                    <div className="p-8 space-y-6">
-                    
-                        {/* Status Messages */}
-                        {statusMessage && (
-                            <div className={`p-4 rounded-xl flex items-start gap-3 border ${
-                            statusMessage.type === 'error' ? 'bg-red-50 text-red-700 border-red-100' :
-                            statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border-green-100' :
-                            statusMessage.type === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
-                            'bg-blue-50 text-blue-700 border-blue-100'
-                            }`}>
-                            {statusMessage.type === 'success' && <CheckCircle className="w-5 h-5 mt-0.5" />}
-                            {statusMessage.type === 'error' && <AlertCircle className="w-5 h-5 mt-0.5" />}
-                            {statusMessage.type === 'warning' && <AlertCircle className="w-5 h-5 mt-0.5" />}
-                            {statusMessage.type === 'info' && <Info className="w-5 h-5 mt-0.5" />}
-                            
-                            <div>
-                                <p className="font-medium text-sm">{statusMessage.text}</p>
-                            </div>
-                            </div>
-                        )}
-
-                        {/* Upload Area */}
-                        <div className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 relative group ${
-                            isSyncing ? 'border-gray-200 bg-gray-50 cursor-wait' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
-                        }`}>
-                            <input 
-                            type="file" 
-                            accept=".txt,.csv,.tsv" 
-                            onChange={handleFileUpload}
-                            disabled={isSyncing}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-                            />
-                            <div className={`flex flex-col items-center gap-4 ${isSyncing ? 'opacity-50' : ''}`}>
-                                <div className="bg-white p-4 rounded-2xl shadow-sm text-gray-700 group-hover:scale-110 transition-transform border border-gray-100">
-                                    <Upload className="w-8 h-8" />
-                                </div>
-                                <div>
-                                    <p className="text-xl font-semibold text-gray-800">
-                                        {fileName ? fileName : t.uploadTitle}
-                                    </p>
-                                    <p className="text-gray-400 mt-2 font-medium">
-                                        {isSyncing ? t.syncing : t.uploadSubtitle}
-                                    </p>
-                                </div>
-                                {!fileName && !isSyncing && (
-                                    <button className="mt-2 bg-[#0F172A] text-white px-6 py-2 rounded-lg text-sm font-medium opacity-90 group-hover:opacity-100 transition-opacity">
-                                        {t.chooseFileBtn}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Preview & Actions */}
-                        {processedRows.length > 0 ? (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            
-                            {/* Método de procesamiento visual */}
-                            {processingMethod && (
-                                <div className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider mb-2 px-1 ${
-                                    processingMethod === 'exact' ? 'text-green-600' : 'text-yellow-600'
-                                }`}>
-                                    {processingMethod === 'exact' ? <ShieldCheck className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
-                                    {processingMethod === 'exact' ? t.msgMethodExact : t.msgMethodDate}
-                                </div>
-                            )}
-
-                            <div className="flex justify-between items-center px-1">
-                                <h3 className="font-bold text-gray-700">{t.previewTitle} <span className="text-gray-400 font-normal">({processedRows.length} {t.newItems})</span></h3>
-                                <button 
-                                onClick={downloadCSV}
-                                disabled={isSyncing}
-                                className={`bg-[#714B67] text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-purple-900/10 transition-all ${
-                                    isSyncing 
-                                    ? 'opacity-70 cursor-wait' 
-                                    : 'hover:bg-[#5a3b52] hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95'
-                                }`}
-                                >
-                                {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
-                                {t.downloadBtn}
-                                </button>
-                            </div>
-
-                            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto shadow-inner bg-gray-50/50">
-                                <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
-                                    <tr>
-                                    <th className="p-3 border-b">FECHA</th>
-                                    <th className="p-3 border-b">DESCRIPCION</th>
-                                    <th className="p-3 border-b text-right">IMPORTE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {/* Mostrar vista previa en el orden que se descargará (Viejo -> Nuevo) */}
-                                    {/* NOTA: Para la vista previa puede ser útil ver lo más nuevo arriba, 
-                                        pero para consistencia mostramos cómo quedará el CSV. */}
-                                    {[...processedRows].sort((a, b) => getDateValue(a.fecha) - getDateValue(b.fecha)).map((row, idx) => (
-                                    <tr key={idx} className="border-b last:border-0 hover:bg-white transition-colors">
-                                        <td className="p-3 text-gray-600 whitespace-nowrap">{row.fecha}</td>
-                                        <td className="p-3 text-gray-800 max-w-xs truncate" title={row.descripcion}>{row.descripcion}</td>
-                                        <td className={`p-3 text-right font-mono font-medium ${row.importe < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                        {row.importe.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                                        </td>
-                                    </tr>
-                                    ))}
-                                </tbody>
-                                </table>
-                            </div>
-                            </div>
-                        ) : (
-                            fileName && processedRows.length === 0 && statusMessage?.type !== 'error' && (
-                                <div className="text-center py-6 text-gray-500 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                    {t.msgNoNewReport}
-                                </div>
-                            )
-                        )}
-
-                        {/* SECCIÓN DE INSTRUCCIONES + SELECTOR DE IDIOMA */}
-                        <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-8 relative mt-8">
-                            
-                            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 pb-4 mb-4 gap-4">
-                                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg">
-                                    <ClipboardList className="w-5 h-5 text-gray-600" />
-                                    {t.instrTitle}
-                                </h3>
-
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
-                                        <Globe className="w-3 h-3" />
-                                        {t.langLabel}
-                                    </span>
-                                    <div className="flex bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
-                                        <button 
-                                            onClick={() => setLanguage('es')} 
-                                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                                                language === 'es' 
-                                                ? 'bg-gray-100 text-gray-900 shadow-sm' 
-                                                : 'text-gray-400 hover:text-gray-600'
-                                            }`}
-                                        >
-                                            MX Español
-                                        </button>
-                                        <button 
-                                            onClick={() => setLanguage('fr')} 
-                                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                                                language === 'fr' 
-                                                ? 'bg-gray-100 text-gray-900 shadow-sm' 
-                                                : 'text-gray-400 hover:text-gray-600'
-                                            }`}
-                                        >
-                                            FR Français
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <ol className="space-y-4 text-sm text-gray-600 list-decimal list-outside ml-4 marker:text-gray-900 marker:font-bold">
-                                <li className="pl-2">
-                                    {t.step1} <span className="font-mono bg-white border border-gray-300 px-1.5 py-0.5 rounded text-xs text-gray-600 font-bold shadow-sm">.txt</span>
-                                </li>
-                                <li className="pl-2">
-                                    {t.step2}
-                                </li>
-                                <li className="pl-2">
-                                    {t.step3} <span className="font-mono bg-white border border-gray-300 px-1.5 py-0.5 rounded text-xs text-[#714B67] font-bold shadow-sm">.csv</span>
-                                </li>
-                                <li className="pl-2">
-                                    {t.step4}
-                                    <div className="mt-2 inline-block bg-[#F3E8FF] border border-purple-200 text-purple-900 px-3 py-1.5 rounded-md font-mono text-xs font-bold shadow-sm">
-                                        BBVA - 012180001206755710
-                                    </div>
-                                </li>
-                                <li className="pl-2">
-                                    {t.step5part1} <span className="font-bold text-purple-700">{t.step5btn1}</span> {t.step5part2} <em className="text-gray-800">{t.step5msg}</em> {t.step5part3} <span className="font-bold text-purple-700">{t.step5btn2}</span>
-                                </li>
-                            </ol>
-                        </div>
-
-                    </div>
-
-                    {/* Footer + Settings */}
-                    <div className="p-6 border-t border-gray-50 flex items-center justify-center relative bg-white">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-gray-400">
-                            {t.footerText}
-                        </p>
-                        
-                        {/* Botón de Ajustes */}
-                        <div className="absolute right-6 bottom-4" ref={settingsRef}>
-                            <button 
-                                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                                className="p-2 bg-[#9CA3AF] hover:bg-gray-600 rounded-lg transition-colors text-white shadow-md hover:shadow-lg"
-                                title={t.settingsTitle}
-                            >
-                                <Settings className="w-5 h-5" />
-                            </button>
-                            
-                            {isSettingsOpen && (
-                                <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase">{t.settingsTitle}</p>
-                                    </div>
-                                    
-                                    {/* Muestra Visual de la Memoria */}
-                                    {lastSavedSignature && (
-                                        <div className="px-4 py-3 border-b border-gray-50 bg-blue-50/50">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 flex items-center gap-1">
-                                                <Database className="w-3 h-3" /> {t.memStatus}
-                                            </p>
-                                            <div className="text-xs text-gray-600 font-mono space-y-1">
-                                                <p className="truncate" title={lastSavedSignature.fecha}>{lastSavedSignature.fecha}</p>
-                                                <p className="truncate font-bold">${lastSavedSignature.importe?.toFixed(2)}</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <button 
-                                        onClick={() => {
-                                            if (lastSavedDate) setShowDeleteConfirm(true);
-                                            setIsSettingsOpen(false);
-                                        }}
-                                        disabled={!lastSavedDate || isSyncing}
-                                        className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        {t.restartMemory}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    
-                    {/* Modal de Confirmación */}
-                    {showDeleteConfirm && (
-                        <div className="fixed inset-0 bg-gray-900/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
-                                <div className="p-8 text-center">
-                                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <AlertTriangle className="w-8 h-8 text-red-500" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t.modalTitle}</h3>
-                                    <p className="text-gray-500 mb-8 leading-relaxed">
-                                        {t.modalText1} <span className="font-bold text-gray-800">{t.modalTextBold}</span>{t.modalText2}
-                                    </p>
-                                    <div className="flex gap-3 justify-center">
-                                        <button 
-                                            onClick={() => setShowDeleteConfirm(false)}
-                                            className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
-                                        >
-                                            {t.btnCancel}
-                                        </button>
-                                        <button 
-                                            onClick={clearMemory}
-                                            className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 shadow-lg shadow-red-200 transition-all hover:scale-105"
-                                        >
-                                            {t.btnConfirm}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                    {trend !== null && !isNaN(trendValue) && (
+                        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                            {trendValue}%
                         </div>
                     )}
+                </div>
+                <h3 className={`${THEME.subtext} text-xs font-bold uppercase tracking-widest ${isForecast ? 'text-red-400' : ''}`}>{title}</h3>
+                <div className="mt-1">
+                    <div className={`text-2xl font-extrabold ${isForecast ? 'text-red-600' : THEME.text} tracking-tight`}>{value}</div>
+                    <div className={`${THEME.subtext} text-xs mt-0.5`}>{subValue}</div>
+                </div>
+            </div>
+        );
+
+        const DetailPanel = ({ entity, onClose, type = "Sucursal" }) => {
+            if (!entity) return null;
+            const insights = [];
+            if (entity.growth > 20) insights.push({ type: 'good', text: 'Crecimiento Exponencial (>20%)', icon: Zap });
+            if (entity.growth < -10) insights.push({ type: 'bad', text: 'Alerta de Decremento', icon: TrendingDown });
+            if (entity.lostProducts.length > 0) insights.push({ type: 'warn', text: `Dejó de comprar: ${entity.lostProducts.join(', ')}`, icon: AlertTriangle });
+            if (entity.newProducts.length > 0) insights.push({ type: 'good', text: `Nuevos productos: ${entity.newProducts.join(', ')}`, icon: Layers });
+
+            return (
+                <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white border-l border-gray-200 shadow-2xl p-6 z-[100] overflow-y-auto animate-in slide-in-from-right">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-tight">{entity.name}</h2>
+                            <p className="text-gray-500 text-sm mt-1">{type}: {entity.city || 'Ubicación General'}</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <p className="text-xs text-gray-500">Venta 2024</p>
+                            <p className="text-lg font-bold text-[#1e3a8a] mt-1">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2024)}</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <p className="text-xs text-gray-500">Venta 2025</p>
+                            <p className="text-lg font-bold text-[#FF8A00] mt-1">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2025)}</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 col-span-2 flex justify-between items-center">
+                            <div>
+                                <p className="text-xs text-gray-500">Diferencia '24 vs '25</p>
+                                <p className={`text-xl font-bold mt-1 ${entity.growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {entity.growth > 0 ? '+' : ''}{entity.growth.toFixed(1)}%
+                                </p>
+                            </div>
+                            <div className={`p-2 rounded-lg ${entity.growth >= 0 ? 'bg-emerald-100' : 'bg-rose-100'}`}>
+                                {entity.growth >= 0 ? <ArrowUpRight className="text-emerald-600" /> : <ArrowDownRight className="text-rose-600" />}
+                            </div>
+                        </div>
+                    </div>
+                    <div className={`bg-gradient-to-r ${THEME.gradient} rounded-xl p-5 mb-6 relative overflow-hidden shadow-lg`}>
+                        <div className="relative z-10">
+                            <h3 className="text-white/90 font-bold text-sm mb-1 flex items-center gap-2"><Zap size={14}/> Forecast 2026 (Est.)</h3>
+                            <p className="text-2xl font-bold text-white">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2025 * (1 + (entity.growth/100)))}</p>
+                            <p className="text-xs text-white/80 mt-1">Basado en tendencia histórica</p>
+                        </div>
+                        <div className="absolute right-0 top-0 p-4 opacity-20 text-white"><TrendingUp size={80} /></div>
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-3">Notas de Análisis</h3>
+                    <div className="space-y-3">
+                        {insights.length > 0 ? insights.map((insight, i) => {
+                            const InsightIcon = insight.icon;
+                            return (
+                                <div key={i} className={`p-3 rounded-lg border flex items-start gap-3 text-sm ${
+                                    insight.type === 'good' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                    insight.type === 'bad' ? 'bg-rose-50 border-rose-200 text-rose-700' :
+                                    'bg-amber-50 border-amber-200 text-amber-700'
+                                }`}>
+                                    <InsightIcon size={16} className="shrink-0 mt-0.5" />
+                                    <span>{insight.text}</span>
+                                </div>
+                            );
+                        }) : <p className="text-gray-400 text-sm italic">Sin anomalías detectadas.</p>}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [rawData, setRawData] = useState([]);
+            const [selectedYear, setSelectedYear] = useState('All'); 
+            const [loading, setLoading] = useState(true);
+            const [errorMsg, setErrorMsg] = useState(null);
+            const [isPdfReady, setIsPdfReady] = useState(false);
+            const [selectedForecastQuarter, setSelectedForecastQuarter] = useState('Q1');
+            const [selectedEntity, setSelectedEntity] = useState(null); 
+            const [periodStart, setPeriodStart] = useState('');
+            const [periodEnd, setPeriodEnd] = useState('');
+            const [periodBranch, setPeriodBranch] = useState('All');
+
+            // --- CARGA DE DATOS DESDE GOOGLE SHEETS ---
+            useEffect(() => {
+                const loadData = async () => {
+                    setLoading(true);
+                    setErrorMsg(null);
+                    try {
+                        const response = await fetch(DATA_URL);
+                        if (!response.ok) throw new Error("Error de red al conectar con Google Sheets");
+                        const csvText = await response.text();
+                        
+                        // Parseo manual simple de CSV
+                        const rows = csvText.split(/\r?\n/);
+                        if (rows.length < 2) { 
+                            setErrorMsg("El archivo de Google Sheets está vacío o es inválido.");
+                            setLoading(false); 
+                            return; 
+                        }
+                        
+                        const headers = rows[0].split(',').map(h => h.trim());
+                        
+                        const colFecha = headers.findIndex(h => h.toLowerCase().includes('fecha'));
+                        const colTotal = headers.findIndex(h => h.toLowerCase().includes('total'));
+                        const colKilos = headers.findIndex(h => h.toLowerCase().includes('kilos') || h.toLowerCase().includes('peso')); 
+                        const colPrecio = headers.findIndex(h => h.toLowerCase().includes('precio por kg'));
+                        const colSucursal = headers.findIndex(h => h.toLowerCase().includes('sucursal'));
+                        const colRazon = headers.findIndex(h => h.toLowerCase().includes('razon social'));
+                        const colVariedad = headers.findIndex(h => h.toLowerCase().includes('variedad'));
+                        const colTipo = headers.findIndex(h => h.toLowerCase().includes('tipo de consumo'));
+
+                        const parsed = [];
+                        
+                        // Regex para dividir CSV respetando comillas
+                        const splitCSV = (str) => {
+                            const arr = [];
+                            let quote = false;
+                            let col = '';
+                            for (let i = 0; i < str.length; i++) {
+                                let c = str[i];
+                                if (c === '"') { quote = !quote; continue; }
+                                if (c === ',' && !quote) { arr.push(col); col = ''; continue; }
+                                col += c;
+                            }
+                            arr.push(col);
+                            return arr;
+                        };
+
+                        for (let i = 1; i < rows.length; i++) {
+                            const line = rows[i].trim();
+                            if (!line) continue;
+                            const row = splitCSV(line);
+                            
+                            // Parsear fecha
+                            let dStr = row[colFecha];
+                            let date;
+                            if (dStr && dStr.includes('/')) {
+                                const parts = dStr.split('/');
+                                date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); 
+                            } else if (dStr) {
+                                date = new Date(dStr);
+                            }
+
+                            if (!date || isNaN(date.getTime())) continue;
+
+                            const cleanNum = (val) => {
+                                if (!val) return 0;
+                                return parseFloat(val.replace(/,/g, '')) || 0;
+                            };
+
+                            parsed.push({
+                                id: i,
+                                Fecha: date,
+                                Year: date.getFullYear(),
+                                Month: date.getMonth() + 1,
+                                Day: date.getDate(),
+                                Sucursal: row[colSucursal]?.trim() || 'Desconocida',
+                                RazonSocial: row[colRazon]?.trim() || 'General',
+                                Variedad: row[colVariedad]?.trim() || 'General',
+                                TipoConsumo: row[colTipo]?.trim() || 'General',
+                                Kilos: cleanNum(row[colKilos]),
+                                Total_compra: cleanNum(row[colTotal]),
+                                Precio_por_Kg: cleanNum(row[colPrecio])
+                            });
+                        }
+                        
+                        setRawData(parsed);
+                        setLoading(false);
+                    } catch (err) {
+                        console.error("Error cargando Google Sheet:", err);
+                        setErrorMsg("Error al conectar con la base de datos.");
+                        setLoading(false);
+                    }
+                };
+
+                loadData();
+
+                if (window.jspdf) { setIsPdfReady(true); } 
+                else { 
+                   const checkPdf = setInterval(() => { if (window.jspdf) { setIsPdfReady(true); clearInterval(checkPdf); } }, 500);
+                }
+            }, []);
+
+            // --- LÓGICA DE DATOS ---
+            const filteredData = useMemo(() => {
+                if (selectedYear === 'All' || selectedYear === 'Forecast') return rawData;
+                return rawData.filter(d => d.Year === parseInt(selectedYear));
+            }, [rawData, selectedYear]);
+
+            const kpiMetrics = useMemo(() => {
+                if (!filteredData.length && selectedYear !== 'Forecast') return null;
+
+                // Caso especial FORECAST
+                if (selectedYear === 'Forecast') {
+                    const totalRevenueForecast = chartData.reduce((acc, curr) => acc + curr.y2026_forecast, 0);
+                    const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
+                    const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
+                    const impliedGrowth = rev25 > 0 ? (totalRevenueForecast - rev25) / rev25 : 0;
+                    const totalKilosForecast = kilos25 * (1 + impliedGrowth);
+                    const avgPriceForecast = totalKilosForecast > 0 ? totalRevenueForecast / totalKilosForecast : 0;
+
+                    return {
+                        revenue: totalRevenueForecast,
+                        kilos: totalKilosForecast,
+                        clients: new Set(rawData.map(d=>d.Sucursal)).size, 
+                        avgPrice: avgPriceForecast,
+                        growth: impliedGrowth * 100,
+                        trend: 'up' 
+                    };
+                }
+
+                const revenue = filteredData.reduce((a,b)=>a+b.Total_compra,0);
+                const kilos = filteredData.reduce((a,b)=>a+b.Kilos,0);
+                const wSum = filteredData.reduce((a,b)=>a+(b.Kilos * b.Precio_por_Kg),0);
+                const avgPrice = kilos > 0 ? wSum / kilos : 0;
+                let growth = 0;
+                if (selectedYear === 'All' || selectedYear === '2025') {
+                    const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
+                    const rev24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Total_compra,0);
+                    if (rev24 > 0) growth = ((rev25 - rev24) / rev24) * 100;
+                }
+                return { revenue, kilos, clients: new Set(filteredData.map(d=>d.Sucursal)).size, avgPrice, growth: Math.abs(growth).toFixed(1), trend: growth>0?'up':'down' };
+            }, [filteredData, rawData, selectedYear, chartData]);
+
+            const generateInsights = (groupByKey) => {
+                const entities = {};
+                rawData.forEach(d => {
+                    const key = d[groupByKey];
+                    if (!entities[key]) entities[key] = { name: key, revenue2024: 0, revenue2025: 0, products2024: new Set(), products2025: new Set() };
+                    const e = entities[key];
+                    if (d.Year === 2024) { e.revenue2024 += d.Total_compra; e.products2024.add(d.Variedad); } 
+                    else if (d.Year === 2025) { e.revenue2025 += d.Total_compra; e.products2025.add(d.Variedad); }
+                });
+                return Object.values(entities).map(e => {
+                    const growth = e.revenue2024 > 0 ? ((e.revenue2025 - e.revenue2024) / e.revenue2024) * 100 : 0;
+                    let cityKey = null;
+                    if (groupByKey === 'Sucursal') {
+                        const s = e.name;
+                        if (BRANCH_MAPPING[s]) cityKey = BRANCH_MAPPING[s]; 
+                        else {
+                            if (s.includes('Cancún')||s.includes('Cancun')) cityKey='CANCUN';
+                            else if (s.includes('Monterrey')) cityKey='MONTERREY';
+                            else if (s.includes('Guadalajara')) cityKey='GUADALAJARA';
+                            else if (s.includes('Mérida')) cityKey='MERIDA';
+                            else if (s.includes('Bajio')) cityKey='GUANAJUATO';
+                            else if (s.includes('Vallarta')) cityKey='VALLARTA';
+                            else if (s.includes('Querétaro')) cityKey='QUERETARO';
+                            else if (s.includes('Metepec')) cityKey='METEPEC';
+                        }
+                    }
+                    return { ...e, city: cityKey ? CITY_COORDINATES[cityKey].label : '', growth, lostProducts: [...e.products2024].filter(x => !e.products2025.has(x)), newProducts: [...e.products2025].filter(x => !e.products2024.has(x)), forecast2026: e.revenue2025 * (1 + (growth > 0 ? growth/100 : 0.05)) };
+                }).sort((a,b) => b.revenue2025 - a.revenue2025);
+            };
+
+            const branchInsightsData = useMemo(() => generateInsights('Sucursal'), [rawData]);
+            const socialReasonInsightsData = useMemo(() => generateInsights('RazonSocial'), [rawData]);
+
+            const chartData = useMemo(() => {
+                const months = Array.from({length:12},(_,i)=>({name:new Date(2024,i,1).toLocaleString('es-MX',{month:'short'}).toUpperCase(), monthIdx:i+1, y2024:0, y2025:0, y2026_forecast:0}));
+                filteredData.forEach(d => { if(months[d.Month-1]) { if(d.Year===2024) months[d.Month-1].y2024+=d.Total_compra; if(d.Year===2025) months[d.Month-1].y2025+=d.Total_compra; }});
+                if (selectedYear === 'All') {
+                    const series = [];
+                    const monthsFull = Array.from({length:12},(_,i)=>({y24:0, y25:0}));
+                    rawData.forEach(d => { if(d.Year===2024) monthsFull[d.Month-1].y24+=d.Total_compra; if(d.Year===2025) monthsFull[d.Month-1].y25+=d.Total_compra; });
+                    [2024, 2025].forEach((y, idx) => monthsFull.forEach(m => series.push(idx===0?m.y24:m.y25)));
+                    const hw = calculateHoltWinters(series, 12, 0.3, 0.1, 0.3, 12);
+                    months.forEach((m,i) => m.y2026_forecast = hw[i] || 0);
+                }
+                return months;
+            }, [rawData, filteredData, selectedYear]);
+
+            const consumptionData = useMemo(() => {
+                const grouped = {};
+                filteredData.forEach(item => {
+                    const key = item.TipoConsumo;
+                    if (!grouped[key]) grouped[key] = { name: key, value: 0 };
+                    grouped[key].value += item.Kilos;
+                });
+                return Object.values(grouped).sort((a, b) => b.value - a.value);
+            }, [filteredData]);
+
+            const consumptionForecast = useMemo(() => {
+                let monthsInQ = [];
+                if (selectedForecastQuarter === 'Q1') monthsInQ = [1, 2, 3];
+                else if (selectedForecastQuarter === 'Q2') monthsInQ = [4, 5, 6];
+                else if (selectedForecastQuarter === 'Q3') monthsInQ = [7, 8, 9];
+                else monthsInQ = [10, 11, 12];
+                const baseData = rawData.filter(d => (d.Year === 2025 || d.Year === 2024) && monthsInQ.includes(d.Month));
+                const grouped = {};
+                baseData.forEach(item => {
+                    if (!grouped[item.TipoConsumo]) grouped[item.TipoConsumo] = 0;
+                    grouped[item.TipoConsumo] += item.Kilos; 
+                });
+                Object.keys(grouped).forEach(k => grouped[k] = grouped[k] / (baseData.some(d=>d.Year===2024) && baseData.some(d=>d.Year===2025) ? 2 : 1));
+                const t24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Total_compra,0);
+                const t25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
+                const growth = t24 ? (t25 - t24) / t24 : 0.1;
+                const factor = 1 + (growth !== 0 ? growth : 0.05);
+                return Object.keys(grouped).map(key => ({ name: key, current: grouped[key], forecast: grouped[key] * factor })).sort((a,b) => b.forecast - a.forecast);
+            }, [rawData, selectedForecastQuarter]);
+
+            const quarterlyData = useMemo(() => {
+                const periods = {}; const types = new Set();
+                filteredData.forEach(item => {
+                    let q = item.Month <= 3 ? "Q1" : item.Month <= 6 ? "Q2" : item.Month <= 9 ? "Q3" : "Q4";
+                    const key = selectedYear === 'All' ? `${q} '${item.Year.toString().slice(2)}` : q;
+                    if (!periods[key]) periods[key] = { name: key };
+                    types.add(item.TipoConsumo);
+                    periods[key][item.TipoConsumo] = (periods[key][item.TipoConsumo] || 0) + item.Kilos;
+                });
+                return { data: Object.values(periods).sort((a,b) => a.name.localeCompare(b.name)), keys: Array.from(types) };
+            }, [filteredData, selectedYear]);
+
+            const periodAnalysisData = useMemo(() => {
+                if (!periodStart || !periodEnd) return null;
+                const sDate = new Date(periodStart); sDate.setHours(0,0,0,0);
+                const eDate = new Date(periodEnd); eDate.setHours(23,59,59,999);
+                const data = rawData.filter(d => d.Fecha >= sDate && d.Fecha <= eDate && (periodBranch === 'All' || d.Sucursal === periodBranch));
+                if (data.length === 0) return { empty: true };
+                const revenue = data.reduce((a,b)=>a+b.Total_compra,0);
+                const kilos = data.reduce((a,b)=>a+b.Kilos,0);
+                const prodCounts = {};
+                data.forEach(d => { prodCounts[d.Variedad] = (prodCounts[d.Variedad] || 0) + d.Kilos; });
+                const topProduct = Object.entries(prodCounts).sort((a,b)=>b[1]-a[1])[0];
+                const narrative = `En el periodo seleccionado, ${periodBranch === 'All' ? 'todas las sucursales' : periodBranch} generaron ${formatCurrency(revenue)} con un volumen de ${formatNumber(kilos)} Kg. El producto más solicitado fue "${topProduct ? topProduct[0] : 'N/A'}" (${topProduct ? formatNumber(topProduct[1]) : 0} Kg).`;
+                const breakdown = Object.entries(prodCounts).map(([name, kg]) => ({ name, kg, revenue: data.filter(d=>d.Variedad === name).reduce((a,b)=>a+b.Total_compra,0) })).sort((a,b) => b.kg - a.kg);
+                return { revenue, kilos, narrative, breakdown, empty: false };
+            }, [rawData, periodStart, periodEnd, periodBranch]);
+
+            const downloadPDF = () => {
+                if (!periodAnalysisData || periodAnalysisData.empty || !window.jspdf) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const annualData = rawData.filter(d => periodBranch === 'All' || d.Sucursal === periodBranch);
+                const rev24 = annualData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Total_compra,0);
+                const rev25 = annualData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
+                const growth = rev24 > 0 ? ((rev25 - rev24) / rev24) : 0;
+                const forecast = rev25 * (1 + (growth > 0 ? growth : 0.05));
+
+                const primaryColor = [255, 138, 0]; 
+                const secondaryColor = [30, 58, 138]; 
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(28);
+                doc.setTextColor(...primaryColor);
+                doc.text("SSC", 20, 25);
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text("REPORTE EJECUTIVO DE RENDIMIENTO", 20, 32);
+                doc.setDrawColor(230);
+                doc.line(20, 38, 190, 38);
+
+                doc.setFontSize(10);
+                doc.setTextColor(50);
+                doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 20, 50);
+                doc.text(`Periodo Analizado: ${periodStart} al ${periodEnd}`, 20, 56);
+                doc.text(`Alcance: ${periodBranch}`, 20, 62);
+
+                doc.setFillColor(...secondaryColor);
+                doc.rect(20, 70, 170, 30, 'F');
+                doc.setTextColor(255);
+                doc.setFontSize(12);
+                doc.text("VENTAS PERIODO", 30, 82);
+                doc.text("VOLUMEN", 120, 82);
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text(formatCurrency(periodAnalysisData.revenue), 30, 92);
+                doc.text(`${formatNumber(periodAnalysisData.kilos)} Kg`, 120, 92);
+
+                doc.setTextColor(50);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                const splitText = doc.splitTextToSize(periodAnalysisData.narrative, 170);
+                doc.text(splitText, 20, 115);
+
+                doc.setFontSize(11);
+                doc.setTextColor(...primaryColor);
+                doc.text("CONTEXTO ANUAL & PROYECCIÓN", 20, 140);
+                
+                doc.autoTable({
+                    startY: 145,
+                    head: [['Concepto', 'Ventas 2024', 'Ventas 2025', 'Crecimiento', 'Forecast 2026']],
+                    body: [['Total Anual', formatCurrency(rev24), formatCurrency(rev25), `${(growth*100).toFixed(1)}%`, formatCurrency(forecast)]],
+                    theme: 'grid',
+                    headStyles: { fillColor: secondaryColor },
+                    styles: { fontSize: 9 }
+                });
+
+                doc.setFontSize(11);
+                doc.setTextColor(...primaryColor);
+                doc.text("DESGLOSE DE PRODUCTOS (PERIODO)", 20, doc.lastAutoTable.finalY + 15);
+
+                const productRows = periodAnalysisData.breakdown.map(item => [item.name, `${formatNumber(item.kg)} Kg`, formatCurrency(item.revenue), `${((item.kg / periodAnalysisData.kilos) * 100).toFixed(1)}%`]);
+
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 20,
+                    head: [['Producto', 'Volumen', 'Venta Total', 'Participación']],
+                    body: productRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: primaryColor },
+                    styles: { fontSize: 9 }
+                });
+
+                doc.save(`Reporte_SSC_${periodStart}.pdf`);
+            };
+
+            const branchList = useMemo(() => [...new Set(rawData.map(d=>d.Sucursal))].sort(), [rawData]);
+
+            const renderNavButton = (id, label, Icon) => (
+                <button onClick={() => setActiveTab(id)} className={`flex flex-col items-center justify-center w-full py-3 ${activeTab === id ? 'text-[#FF8A00]' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <Icon size={24} className={activeTab === id ? 'fill-current opacity-20' : ''} strokeWidth={activeTab === id ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium mt-1 text-center leading-tight">{label}</span>
+                </button>
+            );
+
+            return (
+                <div className={`min-h-screen ${THEME.bg} ${THEME.text} font-sans relative pb-20 md:pb-0`}>
+                    
+                    {selectedEntity && <DetailPanel entity={selectedEntity} onClose={() => setSelectedEntity(null)} type={activeTab === 'branches' ? 'Sucursal' : 'Razón Social'} />}
+
+                    <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                        {renderNavButton('dashboard', 'Tablero General', LayoutDashboard)}
+                        {renderNavButton('branches', 'Rendimiento Sucursales', Building2)}
+                        {renderNavButton('social', 'Análisis Razón Social', Briefcase)}
+                        {renderNavButton('products', 'Mix de Productos', Coffee)}
+                        {renderNavButton('period', 'Explorador Fechas', Search)}
+                    </div>
+
+                    <header className="hidden md:flex bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-40 items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-2"><span className="font-bold text-3xl tracking-tighter text-[#FF8A00]" style={{fontFamily: "'Antonio', sans-serif"}}>SSC</span></div>
+                            <nav className="flex gap-1">
+                                {[{id:'dashboard',l:'Tablero General'}, {id:'branches',l:'Rendimiento Sucursales'}, {id:'social',l:'Análisis Razón Social'}, {id:'products',l:'Mix de Productos'}, {id:'period',l:'Explorador de Fechas'}].map(tab => (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-orange-50 text-[#FF8A00]' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>{tab.l}</button>
+                                ))}
+                            </nav>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {rawData.length > 0 && <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Conectado</span>}
+                        </div>
+                    </header>
+
+                    <main className="p-4 md:p-8 max-w-7xl mx-auto">
+                        <div className="md:hidden flex justify-between items-center mb-6">
+                            <h1 className="text-3xl font-bold tracking-tighter text-[#FF8A00]" style={{fontFamily: "'Antonio', sans-serif"}}>SSC</h1>
+                        </div>
+
+                        {activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && (
+                            <div className="flex justify-end mb-6">
+                                <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 inline-flex">
+                                    {['All', '2025', '2024', 'Forecast'].map(y => (
+                                        <button key={y} onClick={() => setSelectedYear(y)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedYear === y ? 'bg-gray-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}>{y === 'All' ? 'Histórico' : y}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {loading && (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-8 h-8 border-4 border-[#FF8A00] border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <div className="text-[#FF8A00] text-lg font-medium animate-pulse">Conectando con base de datos...</div>
+                            </div>
+                        )}
+                        
+                        {!loading && errorMsg && (
+                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-red-300 rounded-3xl bg-red-50">
+                                <AlertCircle size={32} className="text-red-500 mb-2"/>
+                                <h3 className="text-lg font-bold text-red-800">Error de Conexión</h3>
+                                <p className="text-sm text-red-600 mt-1 max-w-xs mx-auto">{errorMsg}</p>
+                            </div>
+                        )}
+
+                        {!loading && !errorMsg && rawData.length > 0 && activeTab === 'dashboard' && kpiMetrics && (
+                        <>
+                            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div><h3 className="font-bold text-lg text-gray-900">Evolución de Ventas {selectedYear === 'Forecast' ? '(Proyección 2026)' : ''}</h3><p className="text-xs text-gray-400">Comparativa Anual y Proyección</p></div>
+                                    {(selectedYear === 'All' || selectedYear === 'Forecast') && <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold"><Zap size={12}/> Forecast AI</div>}
+                                </div>
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData} margin={{top:5, right:0, left:-20, bottom:0}}>
+                                            <defs><linearGradient id="g25" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={THEME.colors.primary} stopOpacity={0.2}/><stop offset="95%" stopColor={THEME.colors.primary} stopOpacity={0}/></linearGradient></defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
+                                            <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                                            <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v/1000}k`}/>
+                                            <Tooltip contentStyle={{backgroundColor:'#FFF', borderColor:'#E5E7EB', borderRadius:'12px', boxShadow:'0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} formatter={v => formatCurrency(v)}/>
+                                            
+                                            {/* Si no es Forecast, mostramos 2025 y 2024 */}
+                                            {selectedYear !== 'Forecast' && (
+                                                <>
+                                                <Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} />
+                                                <Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" />
+                                                </>
+                                            )}
+                                            
+                                            {/* Si es All o Forecast, mostramos Forecast. Si es solo Forecast, ocultamos lo demas o lo hacemos muy tenue */}
+                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (
+                                                <Area 
+                                                    type="monotone" 
+                                                    dataKey="y2026_forecast" 
+                                                    stroke={THEME.colors.forecast} 
+                                                    fill="transparent" 
+                                                    strokeWidth={selectedYear === 'Forecast' ? 4 : 2} 
+                                                    strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} 
+                                                    name="Forecast 2026" 
+                                                />
+                                            )}
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8">
+                            <KPICard title={selectedYear === 'Forecast' ? "Ventas Estimadas 2026" : "Ventas Totales"} value={formatCurrency(kpiMetrics.revenue)} subValue={selectedYear === 'Forecast' ? "Proyección Anual" : "Ingresos Brutos"} icon={DollarSign} trend={kpiMetrics.trend} trendValue={kpiMetrics.growth} isForecast={selectedYear === 'Forecast'} />
+                            <KPICard title={selectedYear === 'Forecast' ? "Volumen Estimado" : "Volumen (Kg)"} value={formatNumber(kpiMetrics.kilos)} subValue="Total Distribuido" icon={Weight} trend="up" trendValue="--" isForecast={selectedYear === 'Forecast'} />
+                            <KPICard title="Precio Promedio" value={formatCurrency(kpiMetrics.avgPrice)} subValue="Ponderado (Volumen)" icon={Activity} trend="neutral" trendValue="0.0" isForecast={selectedYear === 'Forecast'} />
+                            <KPICard title="Cobertura" value={kpiMetrics.clients} subValue="Puntos Activos" icon={MapPin} trend={null} isForecast={selectedYear === 'Forecast'} />
+                            </div>
+                        </>
+                        )}
+
+                        {!loading && activeTab === 'products' && (
+                        <div className="space-y-6 animate-in fade-in">
+                            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-bold text-lg text-gray-900">Ranking de Consumo</h3>
+                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Top Variedades</span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-gray-400 border-b border-gray-100"><tr><th className="pb-3 pl-2 font-medium">Producto</th><th className="pb-3 text-right font-medium">Volumen</th><th className="pb-3 text-right font-medium pr-2">Share</th></tr></thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {consumptionData.map((item, i) => (
+                                                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="py-3 pl-2 text-gray-700 font-medium flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor: THEME.colors.stacks[i%6]}}></div>{item.name}</td>
+                                                    <td className="py-3 text-right text-gray-900 font-bold">{formatNumber(item.value)} Kg</td>
+                                                    <td className="py-3 text-right pr-2 text-gray-500">{((item.value / kpiMetrics.kilos) * 100).toFixed(1)}%</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                    <h3 className="font-bold text-lg text-gray-900 mb-6">Evolución Trimestral</h3>
+                                    <div className="h-[250px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={quarterlyData.data}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                                                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                                                <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                                                <Tooltip contentStyle={{ backgroundColor: '#FFF', borderColor: '#E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} cursor={{fill:'#F9FAFB'}} />
+                                                <Bar dataKey="name" fill={THEME.colors.primary} radius={[4, 4, 0, 0]} />
+                                                {quarterlyData.keys.map((k, i) => (<Bar key={k} dataKey={k} stackId="a" fill={THEME.colors.stacks[i%6]} radius={i === quarterlyData.keys.length - 1 ? [4, 4, 0, 0] : [0,0,0,0]} />))}
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                                <div className={`bg-gradient-to-br ${THEME.gradient} rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center`}>
+                                    <div className="absolute right-0 top-0 p-6 opacity-20"><Zap size={140} /></div>
+                                    <div className="relative z-10">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div><h3 className="text-white/90 font-bold flex items-center gap-2"><Zap size={18}/> Forecast 2026</h3><p className="text-xs text-white/70 mt-1">IA Predictiva por Trimestre</p></div>
+                                            <div className="relative">
+                                                <select value={selectedForecastQuarter} onChange={(e) => setSelectedForecastQuarter(e.target.value)} className="appearance-none bg-white/20 border border-white/30 text-white text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none cursor-pointer"><option className="text-gray-900" value="Q1">Q1</option><option className="text-gray-900" value="Q2">Q2</option><option className="text-gray-900" value="Q3">Q3</option><option className="text-gray-900" value="Q4">Q4</option></select>
+                                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {consumptionForecast.slice(0,3).map((item, idx) => (
+                                                <div key={idx}>
+                                                    <div className="flex justify-between text-sm text-white/90 mb-1"><span>{item.name}</span><span className="font-bold">{formatNumber(item.forecast)} Kg</span></div>
+                                                    <div className="h-1.5 bg-black/20 rounded-full overflow-hidden"><div className="h-full bg-white" style={{width: `${consumptionForecast[0].forecast > 0 ? (item.forecast / consumptionForecast[0].forecast)*100 : 0}%`}}></div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        )}
+
+                        {!loading && (activeTab === 'branches' || activeTab === 'social') && (
+                        <div className="space-y-6 animate-in fade-in">
+                            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                                <div className="p-6 border-b border-gray-100">
+                                    <h2 className="text-xl font-bold text-gray-900">{activeTab === 'branches' ? 'Rendimiento por Sucursal' : 'Análisis por Cliente'}</h2>
+                                    <p className="text-sm text-gray-500 mt-1">Comparativa Anual 2024 vs 2025</p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                                            <tr>
+                                                <th className="p-4 pl-6">Entidad</th>
+                                                <th className="p-4 text-right">2024</th>
+                                                <th className="p-4 text-right">2025</th>
+                                                <th className="p-4 text-right">Var %</th>
+                                                <th className="p-4 text-right">Forecast '26</th>
+                                                <th className="p-4">Insights</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 text-sm">
+                                            {(activeTab === 'branches' ? branchInsightsData : socialReasonInsightsData).map((entity, i) => (
+                                                <tr key={i} onClick={() => setSelectedEntity(entity)} className="hover:bg-orange-50/50 transition-colors cursor-pointer group">
+                                                    <td className="p-4 pl-6">
+                                                        <div className="font-bold text-gray-900">{entity.name}</div>
+                                                        <div className="text-xs text-gray-400">{activeTab === 'branches' ? entity.city : 'Cliente'}</div>
+                                                    </td>
+                                                    <td className="p-4 text-right font-medium text-slate-500">{formatCurrency(entity.revenue2024)}</td>
+                                                    <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(entity.revenue2025)}</td>
+                                                    <td className="p-4 text-right">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${entity.growth >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                            {entity.growth > 0 ? '+' : ''}{entity.growth.toFixed(0)}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-right font-bold text-indigo-600">{formatCurrency(entity.forecast2026)}</td>
+                                                    <td className="p-4">
+                                                        <div className="flex gap-2">
+                                                            {entity.lostProducts.length > 0 && <AlertTriangle size={16} className="text-amber-500" />}
+                                                            {entity.growth > 20 && <Zap size={16} className="text-blue-500" />}
+                                                            {entity.growth === 0 && entity.revenue2025 === 0 && <span className="text-xs text-gray-400 italic">Inactivo</span>}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        )}
+
+                        {!loading && activeTab === 'period' && (
+                            <div className="space-y-6 animate-in fade-in">
+                                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Search size={20} className="text-[#FF8A00]"/> Explorador de Fechas</h3>
+                                        {periodAnalysisData && !periodAnalysisData.empty && (
+                                            <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-lg font-bold text-xs transition-colors shadow-lg">
+                                                <Download size={14} /> REPORTE PDF
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Inicio</label><input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodStart(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Fin</label><input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Filtrar por</label><div className="relative"><select className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none appearance-none" onChange={(e) => setPeriodBranch(e.target.value)}><option value="All">Todas las Sucursales</option>{branchList.map((b, i) => <option key={i} value={b}>{b}</option>)}</select><ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div></div>
+                                    </div>
+                                </div>
+
+                                {periodAnalysisData && !periodAnalysisData.empty && (
+                                    <div className="space-y-6">
+                                        <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl flex gap-4">
+                                            <Info className="text-indigo-600 shrink-0 mt-0.5" size={20} />
+                                            <div><h4 className="text-indigo-900 font-bold mb-1">Resumen Inteligente</h4><p className="text-indigo-700 text-sm leading-relaxed">{periodAnalysisData.narrative}</p></div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">Ventas Totales</p><p className="text-3xl font-extrabold text-gray-900">{formatCurrency(periodAnalysisData.revenue)}</p></div>
+                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">Volumen</p><p className="text-3xl font-extrabold text-[#FF8A00]">{formatNumber(periodAnalysisData.kilos)} <span className="text-lg text-gray-400">Kg</span></p></div>
+                                        </div>
+                                        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="text-gray-500 bg-gray-50 uppercase text-xs"><tr><th className="p-4 pl-6">Producto</th><th className="p-4 text-right">Kilos</th><th className="p-4 text-right pr-6">Venta</th></tr></thead>
+                                                <tbody className="divide-y divide-gray-50">
+                                                    {periodAnalysisData.breakdown.map((item, idx) => (
+                                                        <tr key={idx} className="hover:bg-gray-50/50"><td className="p-4 pl-6 text-gray-900 font-medium">{item.name}</td><td className="p-4 text-right text-[#FF8A00] font-bold">{formatNumber(item.kg)}</td><td className="p-4 text-right pr-6 text-gray-600">{formatCurrency(item.revenue)}</td></tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
                 </div>
             );
         };
