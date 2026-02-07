@@ -37,6 +37,7 @@
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- IMPORT MAP -->
     <script type="importmap">
@@ -64,7 +65,7 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        import React, { useState, useMemo, useEffect } from 'react';
+        import React, { useState, useMemo, useEffect, useCallback } from 'react';
         import { createRoot } from 'react-dom/client';
         import { 
             LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -74,11 +75,8 @@
             LayoutDashboard, MapPin, Coffee, ArrowUpRight, ArrowDownRight, DollarSign, Weight, 
             Activity, Calendar, FileText, AlertCircle, Zap, Filter, Layers, Info, Map as MapIcon, 
             ChevronDown, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, Building2, Briefcase, 
-            Search, Download, Menu, X, Cloud
+            Search, Download, Menu, X, FileSpreadsheet, Upload
         } from 'lucide-react';
-
-        // --- URL DE DATOS EN VIVO (GOOGLE SHEETS) ---
-        const DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7LJkskJwCnKBAFND_9a_vjbgDwG3CWyhk6EONfnvVFC0J9E2962Bn0g-bSrIcYBSbPYke11EFKtjF/pub?gid=0&single=true&output=csv";
 
         // --- SISTEMA DE DISEÑO ---
         const THEME = {
@@ -272,109 +270,23 @@
             const [activeTab, setActiveTab] = useState('dashboard');
             const [rawData, setRawData] = useState([]);
             const [selectedYear, setSelectedYear] = useState('All'); 
-            const [loading, setLoading] = useState(true);
+            const [loading, setLoading] = useState(false); 
             const [errorMsg, setErrorMsg] = useState(null);
+            const [isXlsxReady, setIsXlsxReady] = useState(false);
             const [isPdfReady, setIsPdfReady] = useState(false);
             const [selectedForecastQuarter, setSelectedForecastQuarter] = useState('Q1');
             const [selectedEntity, setSelectedEntity] = useState(null); 
             const [periodStart, setPeriodStart] = useState('');
             const [periodEnd, setPeriodEnd] = useState('');
             const [periodBranch, setPeriodBranch] = useState('All');
+            const [isDragging, setIsDragging] = useState(false);
 
-            // --- CARGA DE DATOS DESDE GOOGLE SHEETS ---
             useEffect(() => {
-                const loadData = async () => {
-                    setLoading(true);
-                    setErrorMsg(null);
-                    try {
-                        const response = await fetch(DATA_URL);
-                        if (!response.ok) throw new Error("Error de red al conectar con Google Sheets");
-                        const csvText = await response.text();
-                        
-                        // Parseo manual simple de CSV
-                        const rows = csvText.split(/\r?\n/);
-                        if (rows.length < 2) { 
-                            setErrorMsg("El archivo de Google Sheets está vacío o es inválido.");
-                            setLoading(false); 
-                            return; 
-                        }
-                        
-                        const headers = rows[0].split(',').map(h => h.trim());
-                        
-                        const colFecha = headers.findIndex(h => h.toLowerCase().includes('fecha'));
-                        const colTotal = headers.findIndex(h => h.toLowerCase().includes('total'));
-                        const colKilos = headers.findIndex(h => h.toLowerCase().includes('kilos') || h.toLowerCase().includes('peso')); 
-                        const colPrecio = headers.findIndex(h => h.toLowerCase().includes('precio por kg'));
-                        const colSucursal = headers.findIndex(h => h.toLowerCase().includes('sucursal'));
-                        const colRazon = headers.findIndex(h => h.toLowerCase().includes('razon social'));
-                        const colVariedad = headers.findIndex(h => h.toLowerCase().includes('variedad'));
-                        const colTipo = headers.findIndex(h => h.toLowerCase().includes('tipo de consumo'));
-
-                        const parsed = [];
-                        
-                        // Regex para dividir CSV respetando comillas
-                        const splitCSV = (str) => {
-                            const arr = [];
-                            let quote = false;
-                            let col = '';
-                            for (let i = 0; i < str.length; i++) {
-                                let c = str[i];
-                                if (c === '"') { quote = !quote; continue; }
-                                if (c === ',' && !quote) { arr.push(col); col = ''; continue; }
-                                col += c;
-                            }
-                            arr.push(col);
-                            return arr;
-                        };
-
-                        for (let i = 1; i < rows.length; i++) {
-                            const line = rows[i].trim();
-                            if (!line) continue;
-                            const row = splitCSV(line);
-                            
-                            // Parsear fecha
-                            let dStr = row[colFecha];
-                            let date;
-                            if (dStr && dStr.includes('/')) {
-                                const parts = dStr.split('/');
-                                date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); 
-                            } else if (dStr) {
-                                date = new Date(dStr);
-                            }
-
-                            if (!date || isNaN(date.getTime())) continue;
-
-                            const cleanNum = (val) => {
-                                if (!val) return 0;
-                                return parseFloat(val.replace(/,/g, '')) || 0;
-                            };
-
-                            parsed.push({
-                                id: i,
-                                Fecha: date,
-                                Year: date.getFullYear(),
-                                Month: date.getMonth() + 1,
-                                Day: date.getDate(),
-                                Sucursal: row[colSucursal]?.trim() || 'Desconocida',
-                                RazonSocial: row[colRazon]?.trim() || 'General',
-                                Variedad: row[colVariedad]?.trim() || 'General',
-                                TipoConsumo: row[colTipo]?.trim() || 'General',
-                                Kilos: cleanNum(row[colKilos]),
-                                Total_compra: cleanNum(row[colTotal]),
-                                Precio_por_Kg: cleanNum(row[colPrecio])
-                            });
-                        }
-                        
-                        setRawData(parsed);
-                        setLoading(false);
-                    } catch (err) {
-                        console.error("Error cargando Google Sheet:", err);
-                        setErrorMsg("Error al conectar con la base de datos.");
-                        setLoading(false);
-                    }
-                };
-
-                loadData();
+                if (window.XLSX) { setIsXlsxReady(true); } else {
+                    const interval = setInterval(() => {
+                         if (window.XLSX) { setIsXlsxReady(true); clearInterval(interval); }
+                    }, 500);
+                }
 
                 if (window.jspdf) { setIsPdfReady(true); } 
                 else { 
@@ -382,20 +294,101 @@
                 }
             }, []);
 
+            // --- PROCESAMIENTO EXCEL ---
+            const processFile = useCallback((file) => {
+                if (!file) return;
+                setLoading(true); setErrorMsg(null);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = e.target.result;
+                        const workbook = window.XLSX.read(data, { type: 'array', cellDates: true });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = window.XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        if (!jsonData.length) throw new Error("Archivo vacío.");
+                        
+                        const keys = Object.keys(jsonData[0]);
+                        const findKey = (terms) => keys.find(k => terms.some(t => k.toLowerCase().includes(t)));
+                        const colFecha = findKey(['fecha', 'date']);
+                        const colTotal = findKey(['total compra', 'total']);
+                        const colKilos = keys.find(k => ['kilos', 'kg', 'peso'].includes(k.toLowerCase().trim())) || findKey(['kilos', 'kg']);
+                        const colPrecio = findKey(['precio por kg', 'precio', 'precio_kg']);
+                        const colSucursal = findKey(['sucursal', 'tienda']);
+                        const colRazon = findKey(['razon social', 'razón social', 'cliente', 'empresa']); 
+                        const colVariedad = findKey(['variedad', 'producto']);
+                        const colTipo = findKey(['tipo de consumo', 'consumo', 'tipo']);
+
+                        if (!colFecha || !colTotal) throw new Error("Faltan columnas clave (Fecha o Total).");
+
+                        const parsed = jsonData.map((row, i) => {
+                            let d = row[colFecha];
+                            if (!(d instanceof Date)) d = new Date(d);
+                            if (isNaN(d.getTime())) return null;
+                            let tipo = String(row[colTipo] || 'General').trim();
+                            if(tipo.length > 1) tipo = tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase();
+                            return {
+                                id: i, Fecha: d, Year: d.getFullYear(), Month: d.getMonth() + 1, Day: d.getDate(),
+                                Sucursal: String(row[colSucursal] || 'Desconocida').trim(),
+                                RazonSocial: String(row[colRazon] || 'General').trim(), 
+                                Variedad: String(row[colVariedad] || 'General').trim(),
+                                TipoConsumo: tipo,
+                                Kilos: parseFloat(row[colKilos]) || 0,
+                                Total_compra: parseFloat(row[colTotal]) || 0,
+                                Precio_por_Kg: parseFloat(row[colPrecio]) || 0,
+                            };
+                        }).filter(Boolean);
+                        setRawData(parsed); setLoading(false);
+                    } catch (err) { console.error(err); setErrorMsg(err.message); setLoading(false); }
+                };
+                reader.readAsArrayBuffer(file);
+            }, []);
+
+            const onDrop = (e) => { e.preventDefault(); setIsDragging(false); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); };
+
             // --- LÓGICA DE DATOS ---
             const filteredData = useMemo(() => {
                 if (selectedYear === 'All' || selectedYear === 'Forecast') return rawData;
                 return rawData.filter(d => d.Year === parseInt(selectedYear));
             }, [rawData, selectedYear]);
 
+            // --- CHART DATA (Calculado ANTES que kpiMetrics) ---
+            const chartData = useMemo(() => {
+                const months = Array.from({length:12},(_,i)=>({name:new Date(2024,i,1).toLocaleString('es-MX',{month:'short'}).toUpperCase(), monthIdx:i+1, y2024:0, y2025:0, y2026_forecast:0}));
+                
+                // Procesamiento base
+                rawData.forEach(d => { 
+                    if(months[d.Month-1]) { 
+                        if(d.Year===2024) months[d.Month-1].y2024+=d.Total_compra; 
+                        if(d.Year===2025) months[d.Month-1].y2025+=d.Total_compra; 
+                    }
+                });
+
+                // Calcular Forecast (Holt-Winters) siempre
+                const series = [];
+                const monthsFull = Array.from({length:12},(_,i)=>({y24:0, y25:0}));
+                rawData.forEach(d => { if(d.Year===2024) monthsFull[d.Month-1].y24+=d.Total_compra; if(d.Year===2025) monthsFull[d.Month-1].y25+=d.Total_compra; });
+                [2024, 2025].forEach((y, idx) => monthsFull.forEach(m => series.push(idx===0?m.y24:m.y25)));
+                
+                // Solo calcular si hay datos
+                if (series.length > 0) {
+                    const hw = calculateHoltWinters(series, 12, 0.3, 0.1, 0.3, 12);
+                    months.forEach((m,i) => m.y2026_forecast = hw[i] || 0);
+                }
+
+                return months;
+            }, [rawData]);
+
             const kpiMetrics = useMemo(() => {
-                if (!filteredData.length && selectedYear !== 'Forecast') return null;
+                if (!filteredData || (!filteredData.length && selectedYear !== 'Forecast')) return null;
 
                 // Caso especial FORECAST
                 if (selectedYear === 'Forecast') {
+                    if (!chartData || chartData.length === 0) return null;
                     const totalRevenueForecast = chartData.reduce((acc, curr) => acc + curr.y2026_forecast, 0);
+                    
                     const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
                     const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
+                    
                     const impliedGrowth = rev25 > 0 ? (totalRevenueForecast - rev25) / rev25 : 0;
                     const totalKilosForecast = kilos25 * (1 + impliedGrowth);
                     const avgPriceForecast = totalKilosForecast > 0 ? totalRevenueForecast / totalKilosForecast : 0;
@@ -455,20 +448,6 @@
 
             const branchInsightsData = useMemo(() => generateInsights('Sucursal'), [rawData]);
             const socialReasonInsightsData = useMemo(() => generateInsights('RazonSocial'), [rawData]);
-
-            const chartData = useMemo(() => {
-                const months = Array.from({length:12},(_,i)=>({name:new Date(2024,i,1).toLocaleString('es-MX',{month:'short'}).toUpperCase(), monthIdx:i+1, y2024:0, y2025:0, y2026_forecast:0}));
-                filteredData.forEach(d => { if(months[d.Month-1]) { if(d.Year===2024) months[d.Month-1].y2024+=d.Total_compra; if(d.Year===2025) months[d.Month-1].y2025+=d.Total_compra; }});
-                if (selectedYear === 'All') {
-                    const series = [];
-                    const monthsFull = Array.from({length:12},(_,i)=>({y24:0, y25:0}));
-                    rawData.forEach(d => { if(d.Year===2024) monthsFull[d.Month-1].y24+=d.Total_compra; if(d.Year===2025) monthsFull[d.Month-1].y25+=d.Total_compra; });
-                    [2024, 2025].forEach((y, idx) => monthsFull.forEach(m => series.push(idx===0?m.y24:m.y25)));
-                    const hw = calculateHoltWinters(series, 12, 0.3, 0.1, 0.3, 12);
-                    months.forEach((m,i) => m.y2026_forecast = hw[i] || 0);
-                }
-                return months;
-            }, [rawData, filteredData, selectedYear]);
 
             const consumptionData = useMemo(() => {
                 const grouped = {};
@@ -615,7 +594,9 @@
             );
 
             return (
-                <div className={`min-h-screen ${THEME.bg} ${THEME.text} font-sans relative pb-20 md:pb-0`}>
+                <div className={`min-h-screen ${THEME.bg} ${THEME.text} font-sans relative pb-20 md:pb-0`} onDragOver={(e)=>{e.preventDefault();setIsDragging(true)}}>
+                    
+                    {isDragging && <div className="fixed inset-0 z-[100] bg-white/90 flex flex-col items-center justify-center border-4 border-dashed border-[#FF8A00] m-4 rounded-3xl backdrop-blur-sm" onDragLeave={(e)=>{e.preventDefault();setIsDragging(false)}} onDrop={onDrop}><FileSpreadsheet size={100} className="text-[#FF8A00] mb-6 animate-bounce" /><h2 className="text-3xl font-bold text-gray-800">Suelta tu Excel aquí para actualizar</h2></div>}
                     
                     {selectedEntity && <DetailPanel entity={selectedEntity} onClose={() => setSelectedEntity(null)} type={activeTab === 'branches' ? 'Sucursal' : 'Razón Social'} />}
 
@@ -637,16 +618,17 @@
                             </nav>
                         </div>
                         <div className="flex items-center gap-4">
-                            {rawData.length > 0 && <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Conectado</span>}
+                            {rawData.length > 0 && <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Online</span>}
                         </div>
                     </header>
 
                     <main className="p-4 md:p-8 max-w-7xl mx-auto">
                         <div className="md:hidden flex justify-between items-center mb-6">
                             <h1 className="text-3xl font-bold tracking-tighter text-[#FF8A00]" style={{fontFamily: "'Antonio', sans-serif"}}>SSC</h1>
+                            {rawData.length === 0 && <label className="p-2 bg-[#FF8A00] text-white rounded-lg shadow-lg shadow-orange-200"><Upload size={20}/><input type="file" accept=".xlsx,.csv" onChange={(e)=>processFile(e.target.files[0])} className="hidden" /></label>}
                         </div>
 
-                        {activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && (
+                        {rawData.length > 0 && activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && (
                             <div className="flex justify-end mb-6">
                                 <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 inline-flex">
                                     {['All', '2025', '2024', 'Forecast'].map(y => (
@@ -659,15 +641,23 @@
                         {loading && (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="w-8 h-8 border-4 border-[#FF8A00] border-t-transparent rounded-full animate-spin mb-4"></div>
-                                <div className="text-[#FF8A00] text-lg font-medium animate-pulse">Conectando con base de datos...</div>
+                                <div className="text-[#FF8A00] text-lg font-medium animate-pulse">Cargando...</div>
                             </div>
                         )}
                         
                         {!loading && errorMsg && (
                             <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-red-300 rounded-3xl bg-red-50">
                                 <AlertCircle size={32} className="text-red-500 mb-2"/>
-                                <h3 className="text-lg font-bold text-red-800">Error de Conexión</h3>
+                                <h3 className="text-lg font-bold text-red-800">Error de Archivo</h3>
                                 <p className="text-sm text-red-600 mt-1 max-w-xs mx-auto">{errorMsg}</p>
+                            </div>
+                        )}
+
+                        {!loading && !errorMsg && rawData.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-300 rounded-3xl bg-white/50">
+                                <div className="bg-orange-50 p-4 rounded-full mb-4"><Upload size={32} className="text-[#FF8A00]"/></div>
+                                <h3 className="text-lg font-bold text-gray-800">Carga tu archivo Excel</h3>
+                                <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">Arrastra el archivo o haz clic en el botón superior para comenzar.</p>
                             </div>
                         )}
 
@@ -687,7 +677,6 @@
                                             <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v/1000}k`}/>
                                             <Tooltip contentStyle={{backgroundColor:'#FFF', borderColor:'#E5E7EB', borderRadius:'12px', boxShadow:'0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} formatter={v => formatCurrency(v)}/>
                                             
-                                            {/* Si no es Forecast, mostramos 2025 y 2024 */}
                                             {selectedYear !== 'Forecast' && (
                                                 <>
                                                 <Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} />
@@ -695,7 +684,6 @@
                                                 </>
                                             )}
                                             
-                                            {/* Si es All o Forecast, mostramos Forecast. Si es solo Forecast, ocultamos lo demas o lo hacemos muy tenue */}
                                             {(selectedYear === 'All' || selectedYear === 'Forecast') && (
                                                 <Area 
                                                     type="monotone" 
@@ -720,7 +708,7 @@
                         </>
                         )}
 
-                        {!loading && activeTab === 'products' && (
+                        {!loading && !errorMsg && rawData.length > 0 && activeTab === 'products' && (
                         <div className="space-y-6 animate-in fade-in">
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
@@ -782,7 +770,7 @@
                         </div>
                         )}
 
-                        {!loading && (activeTab === 'branches' || activeTab === 'social') && (
+                        {!loading && !errorMsg && rawData.length > 0 && (activeTab === 'branches' || activeTab === 'social') && (
                         <div className="space-y-6 animate-in fade-in">
                             <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                                 <div className="p-6 border-b border-gray-100">
@@ -832,7 +820,7 @@
                         </div>
                         )}
 
-                        {!loading && activeTab === 'period' && (
+                        {!loading && !errorMsg && rawData.length > 0 && activeTab === 'period' && (
                             <div className="space-y-6 animate-in fade-in">
                                 <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                     <div className="flex justify-between items-center mb-6">
