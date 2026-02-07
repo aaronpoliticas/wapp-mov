@@ -25,6 +25,16 @@
                             primary: '#FF8A00',
                             secondary: '#1e3a8a',
                         }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-hint': 'slideRight 1.5s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        slideRight: {
+                            '0%, 100%': { transform: 'translateX(0)', opacity: 0.5 },
+                            '50%': { transform: 'translateX(5px)', opacity: 1 },
+                        }
                     }
                 }
             }
@@ -37,6 +47,7 @@
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- IMPORT MAP -->
     <script type="importmap">
@@ -58,6 +69,11 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 20px; }
         .animate-in { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Indicador de scroll horizontal para tablas */
+        .scroll-hint-overlay {
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0) 80%, rgba(0,0,0,0.05));
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -74,11 +90,89 @@
             LayoutDashboard, MapPin, Coffee, ArrowUpRight, ArrowDownRight, DollarSign, Weight, 
             Activity, Calendar, FileText, AlertCircle, Zap, Filter, Layers, Info, Map as MapIcon, 
             ChevronDown, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, Building2, Briefcase, 
-            Search, Download, Menu, X, Cloud, Upload, FileSpreadsheet
+            Search, Download, Menu, X, Cloud, ArrowRight, Globe
         } from 'lucide-react';
 
         // --- URL DE DATOS EN VIVO (GOOGLE SHEETS) ---
         const DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7LJkskJwCnKBAFND_9a_vjbgDwG3CWyhk6EONfnvVFC0J9E2962Bn0g-bSrIcYBSbPYke11EFKtjF/pub?gid=0&single=true&output=csv";
+
+        // --- DICCIONARIO DE TRADUCCIÓN (MX/FR) ---
+        const TRANSLATIONS = {
+            MX: {
+                dashboard: "Tablero General",
+                branches: "Rendimiento Sucursales",
+                social: "Análisis Razón Social",
+                products: "Mix de Productos",
+                period: "Explorador de Fechas",
+                sales: "Ventas Totales",
+                volume: "Volumen (Kg)",
+                price: "Precio Promedio",
+                coverage: "Cobertura",
+                evolution: "Evolución de Ventas",
+                ranking: "Ranking de Consumo",
+                forecast: "Forecast 2026",
+                growth: "Crecimiento",
+                historical: "Histórico",
+                loading: "Cargando datos...",
+                error: "Error de Conexión",
+                download: "Descargar Reporte",
+                period_start: "Inicio",
+                period_end: "Fin",
+                filter: "Filtrar por",
+                all_branches: "Todas las Sucursales",
+                insights: "Notas de Análisis",
+                connected: "Conectado",
+                gross_income: "Ingresos Brutos",
+                distributed: "Total Distribuido",
+                weighted: "Ponderado (Volumen)",
+                active_points: "Puntos Activos",
+                est: "Estimación",
+                compare_annual: "Comparativa Anual",
+                lost_prod: "Dejó de comprar",
+                new_prod: "Nuevo producto",
+                top_growth: "Crecimiento Top",
+                inactive: "Inactivo",
+                connection_error: "No se pudo conectar a la base de datos. Verifique su conexión.",
+                retry: "Reintentar"
+            },
+            FR: {
+                dashboard: "Tableau de Bord",
+                branches: "Performance Succursales",
+                social: "Analyse Raison Sociale",
+                products: "Mix Produits",
+                period: "Explorateur de Dates",
+                sales: "Ventes Totales",
+                volume: "Volume (Kg)",
+                price: "Prix Moyen",
+                coverage: "Couverture",
+                evolution: "Évolution des Ventes",
+                ranking: "Classement Consommation",
+                forecast: "Prévision 2026",
+                growth: "Croissance",
+                historical: "Historique",
+                loading: "Chargement des données...",
+                error: "Erreur de Connexion",
+                download: "Télécharger Rapport",
+                period_start: "Début",
+                period_end: "Fin",
+                filter: "Filtrer par",
+                all_branches: "Toutes les Succursales",
+                insights: "Notes d'Analyse",
+                connected: "Connecté",
+                gross_income: "Revenu Brut",
+                distributed: "Total Distribué",
+                weighted: "Pondéré (Volume)",
+                active_points: "Points Actifs",
+                est: "Estimation",
+                compare_annual: "Comparatif Annuel",
+                lost_prod: "Arrêt d'achat",
+                new_prod: "Nouveau produit",
+                top_growth: "Croissance Top",
+                inactive: "Inactif",
+                connection_error: "Impossible de se connecter à la base de données. Vérifiez votre connexion.",
+                retry: "Réessayer"
+            }
+        };
 
         // --- SISTEMA DE DISEÑO ---
         const THEME = {
@@ -176,7 +270,7 @@
         };
 
         // --- COMPONENTES UI ---
-        const KPICard = ({ title, value, subValue, icon: Icon, trend, trendValue, isForecast }) => (
+        const KPICard = ({ title, value, subValue, icon: Icon, trend, trendValue, isForecast, t }) => (
             <div className={`${THEME.card} border ${isForecast ? 'border-red-200 bg-red-50/30' : THEME.border} rounded-xl p-5 shadow-sm hover:shadow-md transition-all h-full relative overflow-hidden group`}>
                 <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-slate-800`}>
                     <Icon size={80} />
@@ -200,20 +294,20 @@
             </div>
         );
 
-        const DetailPanel = ({ entity, onClose, type = "Sucursal" }) => {
+        const DetailPanel = ({ entity, onClose, type = "Sucursal", t }) => {
             if (!entity) return null;
             const insights = [];
-            if (entity.growth > 20) insights.push({ type: 'good', text: 'Crecimiento Exponencial (>20%)', icon: Zap });
-            if (entity.growth < -10) insights.push({ type: 'bad', text: 'Alerta de Decremento', icon: TrendingDown });
-            if (entity.lostProducts.length > 0) insights.push({ type: 'warn', text: `Dejó de comprar: ${entity.lostProducts.join(', ')}`, icon: AlertTriangle });
-            if (entity.newProducts.length > 0) insights.push({ type: 'good', text: `Nuevos productos: ${entity.newProducts.join(', ')}`, icon: Layers });
+            if (entity.growth > 20) insights.push({ type: 'good', text: `${t.top_growth} (>20%)`, icon: Zap });
+            if (entity.growth < -10) insights.push({ type: 'bad', text: t.inactive, icon: TrendingDown });
+            if (entity.lostProducts.length > 0) insights.push({ type: 'warn', text: `${t.lost_prod}: ${entity.lostProducts.join(', ')}`, icon: AlertTriangle });
+            if (entity.newProducts.length > 0) insights.push({ type: 'good', text: `${t.new_prod}: ${entity.newProducts.join(', ')}`, icon: Layers });
 
             return (
                 <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-white border-l border-gray-200 shadow-2xl p-6 z-[100] overflow-y-auto animate-in slide-in-from-right">
                     <div className="flex justify-between items-start mb-6">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 leading-tight">{entity.name}</h2>
-                            <p className="text-gray-500 text-sm mt-1">{type}: {entity.city || 'Ubicación General'}</p>
+                            <p className="text-gray-500 text-sm mt-1">{type}: {entity.city || 'General'}</p>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900">
                             <X size={20} />
@@ -221,16 +315,16 @@
                     </div>
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <p className="text-xs text-gray-500">Venta 2024</p>
+                            <p className="text-xs text-gray-500">2024</p>
                             <p className="text-lg font-bold text-[#1e3a8a] mt-1">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2024)}</p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <p className="text-xs text-gray-500">Venta 2025</p>
+                            <p className="text-xs text-gray-500">2025</p>
                             <p className="text-lg font-bold text-[#FF8A00] mt-1">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2025)}</p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 col-span-2 flex justify-between items-center">
                             <div>
-                                <p className="text-xs text-gray-500">Diferencia '24 vs '25</p>
+                                <p className="text-xs text-gray-500">Var % '24-'25</p>
                                 <p className={`text-xl font-bold mt-1 ${entity.growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                     {entity.growth > 0 ? '+' : ''}{entity.growth.toFixed(1)}%
                                 </p>
@@ -242,13 +336,12 @@
                     </div>
                     <div className={`bg-gradient-to-r ${THEME.gradient} rounded-xl p-5 mb-6 relative overflow-hidden shadow-lg`}>
                         <div className="relative z-10">
-                            <h3 className="text-white/90 font-bold text-sm mb-1 flex items-center gap-2"><Zap size={14}/> Forecast 2026 (Est.)</h3>
+                            <h3 className="text-white/90 font-bold text-sm mb-1 flex items-center gap-2"><Zap size={14}/> {t.forecast} (Est.)</h3>
                             <p className="text-2xl font-bold text-white">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2025 * (1 + (entity.growth/100)))}</p>
-                            <p className="text-xs text-white/80 mt-1">Basado en tendencia histórica</p>
                         </div>
                         <div className="absolute right-0 top-0 p-4 opacity-20 text-white"><TrendingUp size={80} /></div>
                     </div>
-                    <h3 className="font-bold text-gray-900 mb-3">Notas de Análisis</h3>
+                    <h3 className="font-bold text-gray-900 mb-3">{t.insights}</h3>
                     <div className="space-y-3">
                         {insights.length > 0 ? insights.map((insight, i) => {
                             const InsightIcon = insight.icon;
@@ -262,7 +355,7 @@
                                     <span>{insight.text}</span>
                                 </div>
                             );
-                        }) : <p className="text-gray-400 text-sm italic">Sin anomalías detectadas.</p>}
+                        }) : <p className="text-gray-400 text-sm italic">OK.</p>}
                     </div>
                 </div>
             );
@@ -280,41 +373,42 @@
             const [periodStart, setPeriodStart] = useState('');
             const [periodEnd, setPeriodEnd] = useState('');
             const [periodBranch, setPeriodBranch] = useState('All');
+            const [lang, setLang] = useState('MX');
+            const [isConnected, setIsConnected] = useState(true); // Estado de conexión
 
-            // --- CARGA DE DATOS DESDE GOOGLE SHEETS ---
+            // Acceso rápido a textos traducidos
+            const t = TRANSLATIONS[lang];
+
+            // --- CARGA DE DATOS ---
             useEffect(() => {
                 const loadData = async () => {
                     setLoading(true);
                     setErrorMsg(null);
+                    setIsConnected(true); // Asumimos conexión al inicio
                     try {
                         const response = await fetch(DATA_URL);
-                        if (!response.ok) throw new Error("Error de red al conectar con Google Sheets");
+                        if (!response.ok) throw new Error("Error de red");
                         const csvText = await response.text();
                         
                         const rows = csvText.split(/\r?\n/);
                         if (rows.length < 2) { 
-                            setErrorMsg("El archivo de Google Sheets está vacío o es inválido.");
+                            setErrorMsg("Empty file"); 
                             setLoading(false); 
                             return; 
                         }
                         
                         const headers = rows[0].split(',').map(h => h.trim());
-                        
                         const colFecha = headers.findIndex(h => h.toLowerCase().includes('fecha'));
                         const colTotal = headers.findIndex(h => h.toLowerCase().includes('total'));
-                        
-                        // FIX: Mejor detección de columnas (priorizar nombre exacto 'Kilos')
                         let colKilos = headers.findIndex(h => h.toLowerCase() === 'kilos');
-                        if (colKilos === -1) colKilos = headers.findIndex(h => h.toLowerCase().includes('kilos') || h.toLowerCase().includes('cantidad'));
-
+                        if (colKilos === -1) colKilos = headers.findIndex(h => h.toLowerCase().includes('kilos') || h.toLowerCase().includes('peso'));
                         const colPrecio = headers.findIndex(h => h.toLowerCase().includes('precio por kg'));
                         const colSucursal = headers.findIndex(h => h.toLowerCase().includes('sucursal'));
-                        const colRazon = headers.findIndex(h => h.toLowerCase().includes('razon social') || h.toLowerCase().includes('razón social'));
+                        const colRazon = headers.findIndex(h => h.toLowerCase().includes('razon social'));
                         const colVariedad = headers.findIndex(h => h.toLowerCase().includes('variedad'));
                         const colTipo = headers.findIndex(h => h.toLowerCase().includes('tipo de consumo'));
 
                         const parsed = [];
-                        
                         const splitCSV = (str) => {
                             const arr = [];
                             let quote = false;
@@ -333,7 +427,6 @@
                             const line = rows[i].trim();
                             if (!line) continue;
                             const row = splitCSV(line);
-                            
                             let dStr = row[colFecha];
                             let date;
                             if (dStr && dStr.includes('/')) {
@@ -342,7 +435,6 @@
                             } else if (dStr) {
                                 date = new Date(dStr);
                             }
-
                             if (!date || isNaN(date.getTime())) continue;
 
                             const cleanNum = (val) => {
@@ -351,11 +443,7 @@
                             };
 
                             parsed.push({
-                                id: i,
-                                Fecha: date,
-                                Year: date.getFullYear(),
-                                Month: date.getMonth() + 1,
-                                Day: date.getDate(),
+                                id: i, Fecha: date, Year: date.getFullYear(), Month: date.getMonth() + 1, Day: date.getDate(),
                                 Sucursal: row[colSucursal]?.trim() || 'Desconocida',
                                 RazonSocial: row[colRazon]?.trim() || 'General',
                                 Variedad: row[colVariedad]?.trim() || 'General',
@@ -365,22 +453,16 @@
                                 Precio_por_Kg: cleanNum(row[colPrecio])
                             });
                         }
-                        
-                        setRawData(parsed);
-                        setLoading(false);
-                    } catch (err) {
-                        console.error("Error cargando Google Sheet:", err);
-                        setErrorMsg("Error al conectar con la base de datos.");
-                        setLoading(false);
+                        setRawData(parsed); setLoading(false);
+                    } catch (err) { 
+                        setErrorMsg("Error al conectar"); 
+                        setLoading(false); 
+                        setIsConnected(false); // Marcar como desconectado
                     }
                 };
-
                 loadData();
-
                 if (window.jspdf) { setIsPdfReady(true); } 
-                else { 
-                   const checkPdf = setInterval(() => { if (window.jspdf) { setIsPdfReady(true); clearInterval(checkPdf); } }, 500);
-                }
+                else { const checkPdf = setInterval(() => { if (window.jspdf) { setIsPdfReady(true); clearInterval(checkPdf); } }, 500); }
             }, []);
 
             // --- LÓGICA DE DATOS ---
@@ -391,30 +473,25 @@
 
             const chartData = useMemo(() => {
                 const months = Array.from({length:12},(_,i)=>({name:new Date(2024,i,1).toLocaleString('es-MX',{month:'short'}).toUpperCase(), monthIdx:i+1, y2024:0, y2025:0, y2026_forecast:0}));
-                
                 rawData.forEach(d => { 
                     if(months[d.Month-1]) { 
                         if(d.Year===2024) months[d.Month-1].y2024+=d.Total_compra; 
                         if(d.Year===2025) months[d.Month-1].y2025+=d.Total_compra; 
                     }
                 });
-
                 const series = [];
                 const monthsFull = Array.from({length:12},(_,i)=>({y24:0, y25:0}));
                 rawData.forEach(d => { if(d.Year===2024) monthsFull[d.Month-1].y24+=d.Total_compra; if(d.Year===2025) monthsFull[d.Month-1].y25+=d.Total_compra; });
                 [2024, 2025].forEach((y, idx) => monthsFull.forEach(m => series.push(idx===0?m.y24:m.y25)));
-                
                 if (series.length > 0) {
                     const hw = calculateHoltWinters(series, 12, 0.3, 0.1, 0.3, 12);
                     months.forEach((m,i) => m.y2026_forecast = hw[i] || 0);
                 }
-
                 return months;
             }, [rawData]);
 
             const kpiMetrics = useMemo(() => {
                 if (!filteredData || (!filteredData.length && selectedYear !== 'Forecast')) return null;
-
                 if (selectedYear === 'Forecast') {
                     if (!chartData || chartData.length === 0) return null;
                     const totalRevenueForecast = chartData.reduce((acc, curr) => acc + curr.y2026_forecast, 0);
@@ -423,17 +500,8 @@
                     const impliedGrowth = rev25 > 0 ? (totalRevenueForecast - rev25) / rev25 : 0;
                     const totalKilosForecast = kilos25 * (1 + impliedGrowth);
                     const avgPriceForecast = totalKilosForecast > 0 ? totalRevenueForecast / totalKilosForecast : 0;
-
-                    return {
-                        revenue: totalRevenueForecast,
-                        kilos: totalKilosForecast,
-                        clients: new Set(rawData.map(d=>d.Sucursal)).size, 
-                        avgPrice: avgPriceForecast,
-                        growth: impliedGrowth * 100,
-                        trend: 'up' 
-                    };
+                    return { revenue: totalRevenueForecast, kilos: totalKilosForecast, clients: new Set(rawData.map(d=>d.Sucursal)).size, avgPrice: avgPriceForecast, growth: impliedGrowth * 100, trend: 'up' };
                 }
-
                 const revenue = filteredData.reduce((a,b)=>a+b.Total_compra,0);
                 const kilos = filteredData.reduce((a,b)=>a+b.Kilos,0);
                 const wSum = filteredData.reduce((a,b)=>a+(b.Kilos * b.Precio_por_Kg),0);
@@ -446,6 +514,31 @@
                 }
                 return { revenue, kilos, clients: new Set(filteredData.map(d=>d.Sucursal)).size, avgPrice, growth: Math.abs(growth).toFixed(1), trend: growth>0?'up':'down' };
             }, [filteredData, rawData, selectedYear, chartData]);
+
+            // --- Custom Tooltip Ajustado ---
+            const CustomTooltip = ({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                    const p24 = payload.find(p => p.dataKey === 'y2024');
+                    const p25 = payload.find(p => p.dataKey === 'y2025');
+                    const p26 = payload.find(p => p.dataKey === 'y2026_forecast');
+                    const v24 = p24 ? p24.value : 0;
+                    const v25 = p25 ? p25.value : 0;
+                    const v26 = p26 ? p26.value : 0;
+                    const growth = v24 > 0 ? ((v25 - v24) / v24) * 100 : 0;
+                    const growthStr = v24 > 0 ? `${growth > 0 ? '+' : ''}${growth.toFixed(2)}%` : '-';
+                    const growthColor = growth >= 0 ? 'text-emerald-500' : 'text-rose-500';
+
+                    return (
+                        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg text-xs">
+                            <p className="font-bold text-slate-700 mb-2 border-b pb-1">{label}</p>
+                            <div className="flex justify-between gap-4 mb-1"><span className="text-[#1e3a8a] font-medium">2024:</span><span className="font-medium text-slate-700">{formatCurrency(v24)}</span></div>
+                            <div className="flex justify-between gap-4 mb-1"><span className="text-[#FF8A00] font-medium">2025:</span><div className="text-right"><span className="font-bold text-[#FF8A00] block">{formatCurrency(v25)}</span><span className={`text-[10px] ${growthColor} block`}>{growthStr}</span></div></div>
+                             <div className="flex justify-between gap-4 pt-1 border-t border-slate-100 mt-1"><span className="text-rose-500 font-medium">Forecast 2026:</span><span className="font-bold text-rose-500">{formatCurrency(v26)}</span></div>
+                        </div>
+                    );
+                }
+                return null;
+            };
 
             const generateInsights = (groupByKey) => {
                 const entities = {};
@@ -479,7 +572,7 @@
 
             const branchInsightsData = useMemo(() => generateInsights('Sucursal'), [rawData]);
             const socialReasonInsightsData = useMemo(() => generateInsights('RazonSocial'), [rawData]);
-
+            
             const consumptionData = useMemo(() => {
                 const grouped = {};
                 filteredData.forEach(item => {
@@ -615,6 +708,39 @@
                 doc.save(`Reporte_SSC_${periodStart}.pdf`);
             };
 
+            const downloadTablePDF = (data, title) => {
+                if (!data || !window.jspdf) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(22);
+                doc.setTextColor(255, 138, 0); // Orange
+                doc.text("SSC", 14, 20);
+                doc.setFontSize(14);
+                doc.setTextColor(40);
+                doc.text(title, 14, 30);
+                
+                const tableRows = data.map(e => [
+                    e.name,
+                    formatCurrency(e.revenue2024),
+                    formatCurrency(e.revenue2025),
+                    `${e.growth > 0 ? '+' : ''}${e.growth.toFixed(1)}%`,
+                    formatCurrency(e.forecast2026)
+                ]);
+
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Entidad', '2024', '2025', 'Var %', 'Forecast 26']],
+                    body: tableRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [30, 58, 138] }, // Navy
+                    styles: { fontSize: 8 }
+                });
+                
+                doc.save(`SSC_Reporte_${title.replace(/\s+/g, '_')}.pdf`);
+            };
+
             const branchList = useMemo(() => [...new Set(rawData.map(d=>d.Sucursal))].sort(), [rawData]);
 
             const renderNavButton = (id, label, Icon) => (
@@ -627,74 +753,69 @@
             return (
                 <div className={`min-h-screen ${THEME.bg} ${THEME.text} font-sans relative pb-20 md:pb-0`}>
                     
-                    {selectedEntity && <DetailPanel entity={selectedEntity} onClose={() => setSelectedEntity(null)} type={activeTab === 'branches' ? 'Sucursal' : 'Razón Social'} />}
+                    {/* BARRA DE ERROR DE CONEXIÓN */}
+                    {!isConnected && (
+                        <div className="bg-red-600 text-white text-center py-2 text-sm font-bold animate-pulse px-4">
+                            {t.connection_error}
+                        </div>
+                    )}
+
+                    {selectedEntity && <DetailPanel entity={selectedEntity} onClose={() => setSelectedEntity(null)} type={activeTab === 'branches' ? 'Sucursal' : 'Razón Social'} t={t} />}
 
                     <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                        {renderNavButton('dashboard', 'Tablero General', LayoutDashboard)}
-                        {renderNavButton('branches', 'Rendimiento Sucursales', Building2)}
-                        {renderNavButton('social', 'Análisis Razón Social', Briefcase)}
-                        {renderNavButton('products', 'Mix de Productos', Coffee)}
-                        {renderNavButton('period', 'Explorador Fechas', Search)}
+                        {renderNavButton('dashboard', t.dashboard, LayoutDashboard)}
+                        {renderNavButton('branches', t.branches, Building2)}
+                        {renderNavButton('social', t.social, Briefcase)}
+                        {renderNavButton('products', t.products, Coffee)}
+                        {renderNavButton('period', t.period, Search)}
                     </div>
 
                     <header className="hidden md:flex bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-40 items-center justify-between shadow-sm">
                         <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-2"><span className="font-bold text-3xl tracking-tighter text-[#FF8A00]" style={{fontFamily: "'Antonio', sans-serif"}}>SSC</span></div>
+                            <div className="flex items-center gap-2">
+                                <img src="assets/images/logo.png" alt="SSC" className="h-10 w-auto" />
+                            </div>
                             <nav className="flex gap-1">
-                                {[{id:'dashboard',l:'Tablero General'}, {id:'branches',l:'Rendimiento Sucursales'}, {id:'social',l:'Análisis Razón Social'}, {id:'products',l:'Mix de Productos'}, {id:'period',l:'Explorador de Fechas'}].map(tab => (
+                                {[{id:'dashboard',l:t.dashboard}, {id:'branches',l:t.branches}, {id:'social',l:t.social}, {id:'products',l:t.products}, {id:'period',l:t.period}].map(tab => (
                                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-orange-50 text-[#FF8A00]' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>{tab.l}</button>
                                 ))}
                             </nav>
                         </div>
-                        <div className="flex items-center gap-4">
-                            {rawData.length > 0 && <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Conectado</span>}
+                        <div className="flex items-center gap-2">
+                            <button onClick={()=>setLang('MX')} className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${lang==='MX'?'bg-gray-900 text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>MX</button>
+                            <button onClick={()=>setLang('FR')} className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${lang==='FR'?'bg-gray-900 text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>FR</button>
                         </div>
                     </header>
 
                     <main className="p-4 md:p-8 max-w-7xl mx-auto">
+                        {/* MOBILE HEADER CON LOGO Y SELECTOR DE IDIOMA */}
                         <div className="md:hidden flex justify-between items-center mb-6">
-                            <h1 className="text-3xl font-bold tracking-tighter text-[#FF8A00]" style={{fontFamily: "'Antonio', sans-serif"}}>SSC</h1>
+                            <img src="assets/images/logo.png" alt="SSC" className="h-8 w-auto" />
+                            <div className="flex gap-2">
+                                <button onClick={()=>setLang('MX')} className={`text-xs font-bold px-2 py-1 rounded ${lang==='MX'?'bg-gray-800 text-white':'bg-gray-200 text-gray-500'}`}>MX</button>
+                                <button onClick={()=>setLang('FR')} className={`text-xs font-bold px-2 py-1 rounded ${lang==='FR'?'bg-gray-800 text-white':'bg-gray-200 text-gray-500'}`}>FR</button>
+                            </div>
                         </div>
 
                         {activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && (
                             <div className="flex justify-end mb-6">
                                 <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 inline-flex">
-                                    {['All', '2025', '2024', 'Forecast'].map(y => (
-                                        <button key={y} onClick={() => setSelectedYear(y)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedYear === y ? 'bg-gray-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}>{y === 'All' ? 'Histórico' : y}</button>
+                                    {['All', '2024', '2025', 'Forecast'].map(y => (
+                                        <button key={y} onClick={() => setSelectedYear(y)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedYear === y ? 'bg-gray-900 text-white shadow' : 'text-gray-500 hover:text-gray-900'}`}>{y === 'All' ? t.historical : y === 'Forecast' ? t.forecast : y}</button>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {loading && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-8 h-8 border-4 border-[#FF8A00] border-t-transparent rounded-full animate-spin mb-4"></div>
-                                <div className="text-[#FF8A00] text-lg font-medium animate-pulse">Conectando con base de datos...</div>
-                            </div>
-                        )}
-                        
-                        {!loading && errorMsg && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-red-300 rounded-3xl bg-red-50">
-                                <AlertCircle size={32} className="text-red-500 mb-2"/>
-                                <h3 className="text-lg font-bold text-red-800">Error de Conexión</h3>
-                                <p className="text-sm text-red-600 mt-1 max-w-xs mx-auto">{errorMsg}</p>
-                            </div>
-                        )}
-
-                        {!loading && !errorMsg && rawData.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-300 rounded-3xl bg-white/50">
-                                <div className="bg-orange-50 p-4 rounded-full mb-4"><Cloud size={32} className="text-[#FF8A00]"/></div>
-                                <h3 className="text-lg font-bold text-gray-800">Carga tu archivo Excel</h3>
-                                <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">Arrastra el archivo o haz clic en el botón superior para comenzar.</p>
-                            </div>
-                        )}
+                        {loading && <div className="text-[#FF8A00] animate-pulse text-center py-20 text-lg font-medium">{t.loading}</div>}
+                        {!loading && errorMsg && <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-red-300 rounded-3xl bg-red-50"><AlertCircle size={32} className="text-red-500 mb-2"/><h3 className="text-lg font-bold text-red-800">{t.error}</h3><p className="text-sm text-red-600 mt-1 max-w-xs mx-auto">{errorMsg}</p></div>}
 
                         {!loading && !errorMsg && rawData.length > 0 && activeTab === 'dashboard' && kpiMetrics && (
                         <>
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4">
                                 <div className="flex justify-between items-center mb-6">
-                                    <div><h3 className="font-bold text-lg text-gray-900">Evolución de Ventas {selectedYear === 'Forecast' ? '(Proyección 2026)' : ''}</h3><p className="text-xs text-gray-400">Comparativa Anual y Proyección</p></div>
-                                    {(selectedYear === 'All' || selectedYear === 'Forecast') && <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold"><Zap size={12}/> Forecast AI</div>}
+                                    <div><h3 className="font-bold text-lg text-gray-900">{t.evolution}</h3><p className="text-xs text-gray-400">{t.compare_annual}</p></div>
+                                    {(selectedYear === 'All' || selectedYear === 'Forecast') && <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold"><Zap size={12}/> AI Forecast</div>}
                                 </div>
                                 <div className="h-[300px]">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -703,35 +824,18 @@
                                             <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
                                             <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
                                             <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v/1000}k`}/>
-                                            <Tooltip contentStyle={{backgroundColor:'#FFF', borderColor:'#E5E7EB', borderRadius:'12px', boxShadow:'0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} formatter={v => formatCurrency(v)}/>
-                                            
-                                            {selectedYear !== 'Forecast' && (
-                                                <>
-                                                <Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} />
-                                                <Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" />
-                                                </>
-                                            )}
-                                            
-                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (
-                                                <Area 
-                                                    type="monotone" 
-                                                    dataKey="y2026_forecast" 
-                                                    stroke={THEME.colors.forecast} 
-                                                    fill="transparent" 
-                                                    strokeWidth={selectedYear === 'Forecast' ? 4 : 2} 
-                                                    strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} 
-                                                    name="Forecast 2026" 
-                                                />
-                                            )}
+                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                                            {selectedYear !== 'Forecast' && (<><Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} /><Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" /></>)}
+                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (<Area type="monotone" dataKey="y2026_forecast" stroke={THEME.colors.forecast} fill="transparent" strokeWidth={selectedYear === 'Forecast' ? 4 : 2} strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} name="Forecast 2026" />)}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8">
-                            <KPICard title={selectedYear === 'Forecast' ? "Ventas Estimadas 2026" : "Ventas Totales"} value={formatCurrency(kpiMetrics.revenue)} subValue={selectedYear === 'Forecast' ? "Proyección Anual" : "Ingresos Brutos"} icon={DollarSign} trend={kpiMetrics.trend} trendValue={kpiMetrics.growth} isForecast={selectedYear === 'Forecast'} />
-                            <KPICard title={selectedYear === 'Forecast' ? "Volumen Estimado" : "Volumen (Kg)"} value={formatNumber(kpiMetrics.kilos)} subValue="Total Distribuido" icon={Weight} trend="up" trendValue="--" isForecast={selectedYear === 'Forecast'} />
-                            <KPICard title="Precio Promedio" value={formatCurrency(kpiMetrics.avgPrice)} subValue="Ponderado (Volumen)" icon={Activity} trend="neutral" trendValue="0.0" isForecast={selectedYear === 'Forecast'} />
-                            <KPICard title="Cobertura" value={kpiMetrics.clients} subValue="Puntos Activos" icon={MapPin} trend={null} isForecast={selectedYear === 'Forecast'} />
+                            <KPICard title={t.sales} value={formatCurrency(kpiMetrics.revenue)} subValue={t.gross_income} icon={DollarSign} trend={kpiMetrics.trend} trendValue={kpiMetrics.growth} isForecast={selectedYear === 'Forecast'} t={t} />
+                            <KPICard title={t.volume} value={formatNumber(kpiMetrics.kilos)} subValue={t.distributed} icon={Weight} trend="up" trendValue="--" isForecast={selectedYear === 'Forecast'} t={t} />
+                            <KPICard title={t.price} value={formatCurrency(kpiMetrics.avgPrice)} subValue={t.weighted} icon={Activity} trend="neutral" trendValue="0.0" isForecast={selectedYear === 'Forecast'} t={t} />
+                            <KPICard title={t.coverage} value={kpiMetrics.clients} subValue={t.active_points} icon={MapPin} trend={null} isForecast={selectedYear === 'Forecast'} t={t} />
                             </div>
                         </>
                         )}
@@ -740,8 +844,8 @@
                         <div className="space-y-6 animate-in fade-in">
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-bold text-lg text-gray-900">Ranking de Consumo</h3>
-                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Top Variedades</span>
+                                    <h3 className="font-bold text-lg text-gray-900">{t.ranking}</h3>
+                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Top</span>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
@@ -778,7 +882,7 @@
                                     <div className="absolute right-0 top-0 p-6 opacity-20"><Zap size={140} /></div>
                                     <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-6">
-                                            <div><h3 className="text-white/90 font-bold flex items-center gap-2"><Zap size={18}/> Forecast 2026</h3><p className="text-xs text-white/70 mt-1">IA Predictiva por Trimestre</p></div>
+                                            <div><h3 className="text-white/90 font-bold flex items-center gap-2"><Zap size={18}/> {t.forecast}</h3><p className="text-xs text-white/70 mt-1">IA Predictiva por Trimestre</p></div>
                                             <div className="relative">
                                                 <select value={selectedForecastQuarter} onChange={(e) => setSelectedForecastQuarter(e.target.value)} className="appearance-none bg-white/20 border border-white/30 text-white text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none cursor-pointer"><option className="text-gray-900" value="Q1">Q1</option><option className="text-gray-900" value="Q2">Q2</option><option className="text-gray-900" value="Q3">Q3</option><option className="text-gray-900" value="Q4">Q4</option></select>
                                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none" />
@@ -800,13 +904,20 @@
 
                         {!loading && !errorMsg && rawData.length > 0 && (activeTab === 'branches' || activeTab === 'social') && (
                         <div className="space-y-6 animate-in fade-in">
-                            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                                <div className="p-6 border-b border-gray-100">
-                                    <h2 className="text-xl font-bold text-gray-900">{activeTab === 'branches' ? 'Rendimiento por Sucursal' : 'Análisis por Cliente'}</h2>
-                                    <p className="text-sm text-gray-500 mt-1">Comparativa Anual 2024 vs 2025</p>
+                            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm relative">
+                                {/* Scroll Hint Overlay for Mobile */}
+                                <div className="md:hidden absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-black/5 to-transparent pointer-events-none z-10 flex items-center justify-center">
+                                    <ArrowRight size={16} className="text-gray-400 animate-slide-hint" />
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
+                                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900">{activeTab === 'branches' ? t.branches : t.social}</h2>
+                                        <p className="text-sm text-gray-500 mt-1">{t.compare_annual}</p>
+                                    </div>
+                                    <button onClick={() => downloadTablePDF(activeTab === 'branches' ? branchInsightsData : socialReasonInsightsData, activeTab === 'branches' ? 'Rendimiento Sucursales' : 'Analisis Razón Social')} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"><Download size={18} /></button>
+                                </div>
+                                <div className="overflow-x-auto scroll-smooth">
+                                    <table className="w-full text-left min-w-[600px]">
                                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                                             <tr>
                                                 <th className="p-4 pl-6">Entidad</th>
@@ -848,7 +959,7 @@
                         </div>
                         )}
 
-                        {!loading && !errorMsg && rawData.length > 0 && activeTab === 'period' && (
+                        {!loading && activeTab === 'period' && (
                             <div className="space-y-6 animate-in fade-in">
                                 <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                     <div className="flex justify-between items-center mb-6">
@@ -860,8 +971,8 @@
                                         )}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Inicio</label><input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodStart(e.target.value)} /></div>
-                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Fin</label><input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Inicio</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodStart(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Fin</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodEnd(e.target.value)} /></div>
                                         <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Filtrar por</label><div className="relative"><select className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none appearance-none" onChange={(e) => setPeriodBranch(e.target.value)}><option value="All">Todas las Sucursales</option>{branchList.map((b, i) => <option key={i} value={b}>{b}</option>)}</select><ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div></div>
                                     </div>
                                 </div>
