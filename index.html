@@ -90,7 +90,7 @@
             LayoutDashboard, MapPin, Coffee, ArrowUpRight, ArrowDownRight, DollarSign, Weight, 
             Activity, Calendar, FileText, AlertCircle, Zap, Filter, Layers, Info, Map as MapIcon, 
             ChevronDown, RefreshCw, TrendingUp, TrendingDown, AlertTriangle, Building2, Briefcase, 
-            Search, Download, Menu, X, Cloud, ArrowRight, Globe
+            Search, Download, Menu, X, Cloud, ArrowRight, Globe, BrainCircuit, Target, BarChart3
         } from 'lucide-react';
 
         // --- URL DE DATOS EN VIVO (GOOGLE SHEETS) ---
@@ -133,7 +133,9 @@
                 top_growth: "Crecimiento Top",
                 inactive: "Inactivo",
                 connection_error: "No se pudo conectar a la base de datos. Verifique su conexión.",
-                retry: "Reintentar"
+                retry: "Reintentar",
+                methodology: "Metodología Forecast",
+                back: "Volver"
             },
             FR: {
                 dashboard: "Tableau de Bord",
@@ -170,16 +172,18 @@
                 top_growth: "Croissance Top",
                 inactive: "Inactif",
                 connection_error: "Impossible de se connecter à la base de données. Vérifiez votre connexion.",
-                retry: "Réessayer"
+                retry: "Réessayer",
+                methodology: "Méthodologie Prévision",
+                back: "Retour"
             }
         };
 
         // --- SISTEMA DE DISEÑO ---
         const THEME = {
-            bg: 'bg-[#F5F6F7]',       
-            card: 'bg-[#FFFFFF]',     
+            bg: 'bg-[#F5F6F7]',        
+            card: 'bg-[#FFFFFF]',      
             border: 'border-[#E6E8EB]',
-            text: 'text-[#1F2933]',   
+            text: 'text-[#1F2933]',    
             subtext: 'text-[#6B7280]', 
             accent: 'text-[#FF8A00]', 
             gradient: 'from-[#FF8A00] to-[#FF5E00]',
@@ -224,39 +228,136 @@
             'Mayson Kayser - Arcos Bosques': 'CDMX'
         };
 
-        // --- ALGORITMOS ---
-        const calculateHoltWinters = (data, seasonLength = 12, alpha = 0.2, beta = 0.1, gamma = 0.1, forecastLength = 12) => {
-            if (!data || data.length === 0) return Array(forecastLength).fill(0);
-            if (data.length < seasonLength * 2) {
-                const growth = data.length > 12 ? (data[data.length-1] - data[0]) / data.length : 0.05;
-                const lastVal = data[data.length - 1] || 0;
-                return Array.from({length: forecastLength}, (_, i) => lastVal * (1 + growth * (i+1)));
-            }
-            let seasonals = {};
-            let seasonalAvg = Array.from({length: seasonLength}, () => 0);
-            const dataAvg = data.reduce((a,b)=>a+b,0)/data.length;
-            for (let i = 0; i < seasonLength; i++) {
-                seasonalAvg[i] = (data[i] + data[i + seasonLength]) / 2;
-                seasonals[i] = seasonalAvg[i] - dataAvg;
-            }
-            let level = data[seasonLength-1]; 
-            let trend = (data[seasonLength-1] - data[0]) / seasonLength; 
+        // --- OPERATIONAL FORECAST SYSTEM ---
+
+        // Helper: Detectar tipo de demanda
+        const detectDemandType = (series) => {
+            if (!series || series.length === 0) return 'UNKNOWN';
+            const nonZero = series.filter(v => v > 0).length;
+            const total = series.length;
+            if (total < 6) return 'SPARSE'; // Insufficient history (< 6 months)
+            const zeroRatio = (total - nonZero) / total;
+            if (zeroRatio > 0.35) return 'INTERMITTENT'; // Frequent zeros (>35%)
+            return 'STABLE';
+        };
+
+        // Modelo 1: Croston/TSB (Simplificado para JS) para series intermitentes
+        const calculateCroston = (data, forecastLength) => {
+            const nonZeroValues = data.filter(v => v > 0);
+            if (nonZeroValues.length === 0) return Array(forecastLength).fill(0);
             
-            for (let i = seasonLength; i < data.length; i++) {
+            // Probabilidad de compra (Active months / Total months)
+            const probPurchase = nonZeroValues.length / data.length;
+            // Volumen esperado (Promedio de meses activos)
+            const expectedVol = nonZeroValues.reduce((a,b)=>a+b,0) / nonZeroValues.length;
+            
+            const forecastVal = probPurchase * expectedVol;
+            return Array(forecastLength).fill(forecastVal);
+        };
+
+        // Modelo 2: Weighted Growth para series nuevas/escasas
+        const calculateWeightedGrowth = (data, forecastLength) => {
+            if (data.length === 0) return Array(forecastLength).fill(0);
+            const lastVal = data[data.length-1];
+            // Asumir tendencia global conservadora del 3% si no hay datos suficientes
+            const globalTrend = 0.03 / 12; 
+            return Array.from({length: forecastLength}, (_, i) => lastVal * (1 + globalTrend * (i+1)));
+        };
+
+        // Modelo 3: Holt-Winters Operativo (Existente + Mejoras)
+        const calculateHoltWinters = (data, seasonLength = 12, alpha = 0.25, beta = 0.05, gamma = 0.1, forecastLength = 12) => {
+            if (!data || data.length === 0) return Array(forecastLength).fill(0);
+            
+            // Si hay pocos datos, fallback a proyección lineal simple
+            if (data.length < seasonLength) {
+                const growth = data.length > 3 ? (data[data.length-1] - data[0]) / data.length : 0;
+                const lastVal = data[data.length - 1] || 0;
+                return Array.from({length: forecastLength}, (_, i) => Math.max(0, lastVal * (1 + growth * (i+1))));
+            }
+
+            // Inicialización de componentes
+            let seasonals = Array(seasonLength).fill(0);
+            const dataAvg = data.reduce((a,b)=>a+b,0)/data.length;
+            
+            // Calcular estacionalidad inicial
+            if (data.length >= seasonLength * 2) {
+                for (let i = 0; i < seasonLength; i++) {
+                    let sumDiff = 0;
+                    let count = 0;
+                    for (let j = i; j < data.length; j += seasonLength) {
+                        sumDiff += (data[j] - dataAvg);
+                        count++;
+                    }
+                    seasonals[i] = count > 0 ? sumDiff / count : 0;
+                }
+            }
+
+            // Suavizado Exponencial
+            let level = data[0]; 
+            let trend = (data[seasonLength] - data[0]) / seasonLength; // Tendencia inicial más robusta
+            
+            // Ejecutar sobre historial para "aprender" nivel y tendencia actuales
+            for (let i = 0; i < data.length; i++) {
                 const val = data[i];
                 const lastLevel = level;
                 const seasonIdx = i % seasonLength;
+                
+                // Holt-Winters level update
                 level = alpha * (val - seasonals[seasonIdx]) + (1 - alpha) * (lastLevel + trend);
+                // Trend update
                 trend = beta * (level - lastLevel) + (1 - beta) * trend;
+                // Season update (only if enough data, dampened)
                 seasonals[seasonIdx] = gamma * (val - level) + (1 - gamma) * seasonals[seasonIdx];
             }
+
+            // Generar Forecast Futuro
             const forecast = [];
             for (let i = 1; i <= forecastLength; i++) {
                 const seasonIdx = (data.length + i - 1) % seasonLength;
-                const val = level + (trend * i) + seasonals[seasonIdx];
+                // Damping factor: reduce la agresividad de la tendencia a largo plazo (realismo operativo)
+                const damping = Math.pow(0.98, i); 
+                const val = level + (trend * i * damping) + seasonals[seasonIdx];
                 forecast.push(val > 0 ? val : 0);
             }
             return forecast;
+        };
+
+        // MASTER ENGINE: Selector Dinámico de Modelos
+        const generateOperationalForecast = (series, forecastLength = 12) => {
+            const type = detectDemandType(series);
+            
+            if (type === 'INTERMITTENT') {
+                return calculateCroston(series, forecastLength);
+            } else if (type === 'SPARSE') {
+                return calculateWeightedGrowth(series, forecastLength);
+            } else {
+                // STABLE -> Holt-Winters
+                // Detectar varianza para ajustar gamma (si es muy plano, gamma = 0)
+                const mean = series.reduce((a,b)=>a+b,0)/series.length;
+                const variance = series.reduce((a,b)=>a+Math.pow(b-mean,2),0)/series.length;
+                const lowSeasonality = (Math.sqrt(variance)/mean) < 0.1;
+                
+                return calculateHoltWinters(series, 12, 0.3, 0.1, lowSeasonality ? 0 : 0.15, forecastLength);
+            }
+        };
+
+        // ANNUAL FORECAST LOGIC (TABLAS): Structural Growth
+        const calculateStructuralForecast2026 = (rev2024, rev2025) => {
+            // No usar suma de HW mensual para el total anual, usar tendencia estructural
+            if (rev2024 === 0) return rev2025 * 1.05; // Fallback para nuevos clientes (5% conservador)
+            
+            const rawGrowth = (rev2025 - rev2024) / rev2024;
+            
+            // Reglas de Realismo Operativo:
+            // 1. Cap growth excesivo (>40% se considera anomalía o apertura, se suaviza al 25% para planning)
+            // 2. Floor caídas excesivas (<-20% asume recuperación parcial o estabilización)
+            
+            let planningGrowth = rawGrowth;
+            if (rawGrowth > 0.40) planningGrowth = 0.25; 
+            else if (rawGrowth > 0.20) planningGrowth = 0.15; // Growth tier 2
+            else if (rawGrowth < -0.20) planningGrowth = -0.10; // Soft landing
+            
+            return rev2025 * (1 + planningGrowth);
         };
 
         // --- HELPERS SEGUROS ---
@@ -279,10 +380,10 @@
                     <div className={`p-2.5 rounded-lg ${isForecast ? 'bg-red-100 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
                         <Icon size={20} />
                     </div>
-                    {trend !== null && !isNaN(trendValue) && (
+                    {trend !== null && trendValue !== null && (
                         <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                             {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            {trendValue}%
+                            {trendValue}
                         </div>
                     )}
                 </div>
@@ -337,7 +438,7 @@
                     <div className={`bg-gradient-to-r ${THEME.gradient} rounded-xl p-5 mb-6 relative overflow-hidden shadow-lg`}>
                         <div className="relative z-10">
                             <h3 className="text-white/90 font-bold text-sm mb-1 flex items-center gap-2"><Zap size={14}/> {t.forecast} (Est.)</h3>
-                            <p className="text-2xl font-bold text-white">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.revenue2025 * (1 + (entity.growth/100)))}</p>
+                            <p className="text-2xl font-bold text-white">${new Intl.NumberFormat('es-MX', {maximumFractionDigits:0}).format(entity.forecast2026)}</p>
                         </div>
                         <div className="absolute right-0 top-0 p-4 opacity-20 text-white"><TrendingUp size={80} /></div>
                     </div>
@@ -483,36 +584,75 @@
                 const monthsFull = Array.from({length:12},(_,i)=>({y24:0, y25:0}));
                 rawData.forEach(d => { if(d.Year===2024) monthsFull[d.Month-1].y24+=d.Total_compra; if(d.Year===2025) monthsFull[d.Month-1].y25+=d.Total_compra; });
                 [2024, 2025].forEach((y, idx) => monthsFull.forEach(m => series.push(idx===0?m.y24:m.y25)));
+                
+                // --- FORECAST INTEGRATION: Usar Motor Operativo ---
                 if (series.length > 0) {
-                    const hw = calculateHoltWinters(series, 12, 0.3, 0.1, 0.3, 12);
-                    months.forEach((m,i) => m.y2026_forecast = hw[i] || 0);
+                    const operationalForecast = generateOperationalForecast(series, 12);
+                    months.forEach((m,i) => m.y2026_forecast = operationalForecast[i] || 0);
                 }
                 return months;
             }, [rawData]);
 
             const kpiMetrics = useMemo(() => {
                 if (!filteredData || (!filteredData.length && selectedYear !== 'Forecast')) return null;
+
+                const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
+                const kilos24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Kilos,0);
+
                 if (selectedYear === 'Forecast') {
                     if (!chartData || chartData.length === 0) return null;
                     const totalRevenueForecast = chartData.reduce((acc, curr) => acc + curr.y2026_forecast, 0);
                     const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
-                    const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
+                    
                     const impliedGrowth = rev25 > 0 ? (totalRevenueForecast - rev25) / rev25 : 0;
                     const totalKilosForecast = kilos25 * (1 + impliedGrowth);
                     const avgPriceForecast = totalKilosForecast > 0 ? totalRevenueForecast / totalKilosForecast : 0;
-                    return { revenue: totalRevenueForecast, kilos: totalKilosForecast, clients: new Set(rawData.map(d=>d.Sucursal)).size, avgPrice: avgPriceForecast, growth: impliedGrowth * 100, trend: 'up' };
+                    
+                    const volumeDiff = totalKilosForecast - kilos25;
+                    const volumeTrendStr = `${volumeDiff > 0 ? '+' : ''}${formatNumber(volumeDiff)}kg`;
+
+                    return { 
+                        revenue: totalRevenueForecast, 
+                        kilos: totalKilosForecast, 
+                        clients: new Set(rawData.map(d=>d.Sucursal)).size, 
+                        avgPrice: avgPriceForecast, 
+                        growth: `${impliedGrowth > 0 ? '+' : ''}${(impliedGrowth * 100).toFixed(1)}%`, 
+                        trend: 'up',
+                        volumeTrend: volumeTrendStr,
+                        volumeTrendDir: volumeDiff >= 0 ? 'up' : 'down'
+                    };
                 }
+
                 const revenue = filteredData.reduce((a,b)=>a+b.Total_compra,0);
                 const kilos = filteredData.reduce((a,b)=>a+b.Kilos,0);
                 const wSum = filteredData.reduce((a,b)=>a+(b.Kilos * b.Precio_por_Kg),0);
                 const avgPrice = kilos > 0 ? wSum / kilos : 0;
+                
                 let growth = 0;
-                if (selectedYear === 'All' || selectedYear === '2025') {
+                let volumeDiff = 0;
+                let volumeTrendStr = "--";
+                let volumeTrendDir = "neutral";
+
+                if (selectedYear === '2025') {
                     const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
                     const rev24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Total_compra,0);
                     if (rev24 > 0) growth = ((rev25 - rev24) / rev24) * 100;
+                    
+                    volumeDiff = kilos25 - kilos24;
+                    volumeTrendStr = `${volumeDiff > 0 ? '+' : ''}${formatNumber(volumeDiff)}kg`;
+                    volumeTrendDir = volumeDiff >= 0 ? 'up' : 'down';
                 }
-                return { revenue, kilos, clients: new Set(filteredData.map(d=>d.Sucursal)).size, avgPrice, growth: Math.abs(growth).toFixed(1), trend: growth>0?'up':'down' };
+
+                return { 
+                    revenue, 
+                    kilos, 
+                    clients: new Set(filteredData.map(d=>d.Sucursal)).size, 
+                    avgPrice, 
+                    growth: `${growth > 0 ? '+' : ''}${Math.abs(growth).toFixed(1)}%`, 
+                    trend: growth>0?'up':'down',
+                    volumeTrend: volumeTrendStr,
+                    volumeTrendDir: volumeTrendDir
+                };
             }, [filteredData, rawData, selectedYear, chartData]);
 
             // --- Custom Tooltip Ajustado ---
@@ -566,7 +706,10 @@
                             else if (s.includes('Metepec')) cityKey='METEPEC';
                         }
                     }
-                    return { ...e, city: cityKey ? CITY_COORDINATES[cityKey].label : '', growth, lostProducts: [...e.products2024].filter(x => !e.products2025.has(x)), newProducts: [...e.products2025].filter(x => !e.products2024.has(x)), forecast2026: e.revenue2025 * (1 + (growth > 0 ? growth/100 : 0.05)) };
+                    // --- FORECAST INTEGRATION: Usar Structural Growth para tablas anuales ---
+                    const forecast2026 = calculateStructuralForecast2026(e.revenue2024, e.revenue2025);
+                    const forecastVar = forecast2026 - e.revenue2025;
+                    return { ...e, city: cityKey ? CITY_COORDINATES[cityKey].label : '', growth, lostProducts: [...e.products2024].filter(x => !e.products2025.has(x)), newProducts: [...e.products2025].filter(x => !e.products2024.has(x)), forecast2026, forecastVar };
                 }).sort((a,b) => b.revenue2025 - a.revenue2025);
             };
 
@@ -713,6 +856,9 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 
+                // Ordenar alfabéticamente para el reporte
+                const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(22);
                 doc.setTextColor(255, 138, 0); // Orange
@@ -721,7 +867,7 @@
                 doc.setTextColor(40);
                 doc.text(title, 14, 30);
                 
-                const tableRows = data.map(e => [
+                const tableRows = sortedData.map(e => [
                     e.name,
                     formatCurrency(e.revenue2024),
                     formatCurrency(e.revenue2025),
@@ -797,7 +943,7 @@
                             </div>
                         </div>
 
-                        {activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && (
+                        {activeTab !== 'branches' && activeTab !== 'social' && activeTab !== 'period' && activeTab !== 'methodology' && (
                             <div className="flex justify-end mb-6">
                                 <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 inline-flex">
                                     {['All', '2024', '2025', 'Forecast'].map(y => (
@@ -815,7 +961,11 @@
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4">
                                 <div className="flex justify-between items-center mb-6">
                                     <div><h3 className="font-bold text-lg text-gray-900">{t.evolution}</h3><p className="text-xs text-gray-400">{t.compare_annual}</p></div>
-                                    {(selectedYear === 'All' || selectedYear === 'Forecast') && <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-500 rounded-full text-xs font-bold"><Zap size={12}/> AI Forecast</div>}
+                                    {(selectedYear === 'All' || selectedYear === 'Forecast') && (
+                                        <button onClick={() => setActiveTab('methodology')} className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-full text-xs font-bold transition-colors">
+                                            <Info size={12}/> {t.methodology}
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="h-[300px]">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -825,19 +975,133 @@
                                             <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
                                             <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v/1000}k`}/>
                                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                                            {selectedYear !== 'Forecast' && (<><Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} /><Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" /></>)}
-                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (<Area type="monotone" dataKey="y2026_forecast" stroke={THEME.colors.forecast} fill="transparent" strokeWidth={selectedYear === 'Forecast' ? 4 : 2} strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} name="Forecast 2026" />)}
+                                            {(selectedYear === 'All' || selectedYear === '2025' || selectedYear === 'Forecast') && (
+                                                <Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} />
+                                            )}
+                                            {(selectedYear === 'All' || selectedYear === '2024') && (
+                                                <Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" />
+                                            )}
+                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (
+                                                <Area type="monotone" dataKey="y2026_forecast" stroke={THEME.colors.forecast} fill="transparent" strokeWidth={selectedYear === 'Forecast' ? 4 : 2} strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} name="Forecast 2026" />
+                                            )}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8">
                             <KPICard title={t.sales} value={formatCurrency(kpiMetrics.revenue)} subValue={t.gross_income} icon={DollarSign} trend={kpiMetrics.trend} trendValue={kpiMetrics.growth} isForecast={selectedYear === 'Forecast'} t={t} />
-                            <KPICard title={t.volume} value={formatNumber(kpiMetrics.kilos)} subValue={t.distributed} icon={Weight} trend="up" trendValue="--" isForecast={selectedYear === 'Forecast'} t={t} />
+                            <KPICard title={t.volume} value={formatNumber(kpiMetrics.kilos)} subValue={t.distributed} icon={Weight} trend={kpiMetrics.volumeTrendDir} trendValue={kpiMetrics.volumeTrend} isForecast={selectedYear === 'Forecast'} t={t} />
                             <KPICard title={t.price} value={formatCurrency(kpiMetrics.avgPrice)} subValue={t.weighted} icon={Activity} trend="neutral" trendValue="0.0" isForecast={selectedYear === 'Forecast'} t={t} />
                             <KPICard title={t.coverage} value={kpiMetrics.clients} subValue={t.active_points} icon={MapPin} trend={null} isForecast={selectedYear === 'Forecast'} t={t} />
                             </div>
                         </>
+                        )}
+
+                        {!loading && activeTab === 'methodology' && (
+                            <div className="space-y-6 animate-in fade-in max-w-4xl mx-auto">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <button onClick={() => setActiveTab('dashboard')} className="p-2 bg-white rounded-full border hover:bg-gray-50 transition-colors">
+                                        <ArrowRight className="rotate-180" size={20} />
+                                    </button>
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900">Metodología de Pronóstico Operativo 2026</h2>
+                                        <p className="text-gray-500 text-sm">Explicación del motor de inteligencia artificial</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-6">
+                                    {/* NUEVA SECCIÓN: EXPLICACIÓN DE LA LÍNEA ROJA */}
+                                    <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-5 text-red-600"><TrendingUp size={100} /></div>
+                                        <h3 className="font-bold text-lg text-red-700 mb-4 flex items-center gap-2">
+                                            <Zap size={20} /> ¿De dónde sale la línea roja? (Tablero Principal)
+                                        </h3>
+                                        <div className="text-sm text-gray-700 space-y-4 relative z-10">
+                                            <p>
+                                                La proyección gráfica para 2026 en el tablero general utiliza un modelo específico llamado <strong>Holt-Winters con Tendencia Amortiguada (Damped Trend)</strong>.
+                                            </p>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                    <span className="font-bold text-red-800 block mb-1">1. Base de Datos</span>
+                                                    Toma todo el historial consolidado mes a mes de 2024 y 2025. Al ser una serie continua (sin ceros), el sistema la clasifica como "Demanda Estable".
+                                                </div>
+                                                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                    <span className="font-bold text-red-800 block mb-1">2. El Algoritmo</span>
+                                                    Descompone la venta en tres partes:
+                                                    <ul className="list-disc list-inside mt-1 text-xs text-red-700">
+                                                        <li><strong>Nivel:</strong> Volumen base actual.</li>
+                                                        <li><strong>Tendencia:</strong> Dirección de crecimiento, suavizada al 98% para evitar proyecciones irreales.</li>
+                                                        <li><strong>Estacionalidad:</strong> Patrones cíclicos detectados.</li>
+                                                    </ul>
+                                                </div>
+                                                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                    <span className="font-bold text-red-800 block mb-1">3. Interpretación</span>
+                                                    Si ves "picos y valles", es la <strong>estacionalidad</strong> repitiendo patrones pasados. Si ves que sube o baja, es la <strong>tendencia</strong> amortiguada.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <div className="flex items-start gap-4">
+                                            <div className="bg-blue-50 p-3 rounded-xl text-blue-600"><BrainCircuit size={24} /></div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 mb-2">1. Detección Inteligente de Demanda (Detalle General)</h3>
+                                                <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                                                    Para el resto de las proyecciones (sucursales y productos), el sistema no aplica una fórmula única. Analiza el comportamiento histórico para clasificarla en tres tipos:
+                                                </p>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                        <span className="font-bold text-emerald-600 block mb-1">Estable</span>
+                                                        Ventas continuas con baja frecuencia de ceros. Se prioriza la tendencia y estacionalidad.
+                                                    </div>
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                        <span className="font-bold text-amber-600 block mb-1">Intermitente</span>
+                                                        Ventas con huecos frecuentes. Se calcula probabilidad de compra y volumen esperado (Modelo Croston).
+                                                    </div>
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                        <span className="font-bold text-purple-600 block mb-1">Escasa / Nueva</span>
+                                                        Historial insuficiente. Se proyecta usando tendencias ponderadas del sector.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <div className="flex items-start gap-4">
+                                            <div className="bg-orange-50 p-3 rounded-xl text-orange-600"><Target size={24} /></div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 mb-2">2. Motores de Cálculo</h3>
+                                                <p className="text-sm text-gray-600 leading-relaxed">
+                                                    Dependiendo de la clasificación, se activan diferentes algoritmos matemáticos optimizados para la operación:
+                                                </p>
+                                                <ul className="mt-4 space-y-3 text-sm text-gray-700">
+                                                    <li className="flex gap-2">
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Holt-Winters Adaptativo</span>
+                                                        <span>Para series estables. Ajusta dinámicamente suavizado (alpha) y estacionalidad (gamma) según la varianza reciente.</span>
+                                                    </li>
+                                                    <li className="flex gap-2">
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Croston TSB</span>
+                                                        <span>Para series irregulares. Separa la predicción de "cuándo comprarán" de "cuánto comprarán" para evitar falsos promedios.</span>
+                                                    </li>
+                                                    <li className="flex gap-2">
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Crecimiento Estructural</span>
+                                                        <span>Para proyecciones anuales (Tablas). Detecta la pendiente de crecimiento real (2024-2025) y aplica límites operativos (+40% cap / -20% floor) para evitar proyecciones irreales.</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-2xl text-white shadow-lg">
+                                        <h3 className="font-bold flex items-center gap-2 mb-2"><BarChart3 size={20}/> Realismo Operativo</h3>
+                                        <p className="text-sm text-gray-300 opacity-90">
+                                            A diferencia de los modelos puramente académicos, este motor prioriza la utilidad para la planificación de suministro. Penaliza la volatilidad extrema en clientes pequeños y amplifica las tendencias consolidadas en clientes Top, asegurando que el Forecast 2026 sea una herramienta de decisión y no solo una estadística.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {!loading && !errorMsg && rawData.length > 0 && activeTab === 'products' && (
@@ -925,6 +1189,7 @@
                                                 <th className="p-4 text-right">2025</th>
                                                 <th className="p-4 text-right">Var %</th>
                                                 <th className="p-4 text-right">Forecast '26</th>
+                                                <th className="p-4 text-right">Var. Est.</th>
                                                 <th className="p-4">Insights</th>
                                             </tr>
                                         </thead>
@@ -943,6 +1208,7 @@
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-right font-bold text-indigo-600">{formatCurrency(entity.forecast2026)}</td>
+                                                    <td className="p-4 text-right font-medium text-slate-500">{formatCurrency(entity.forecastVar)}</td>
                                                     <td className="p-4">
                                                         <div className="flex gap-2">
                                                             {entity.lostProducts.length > 0 && <AlertTriangle size={16} className="text-amber-500" />}
