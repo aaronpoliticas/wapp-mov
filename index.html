@@ -176,10 +176,10 @@
 
         // --- SISTEMA DE DISEÑO ---
         const THEME = {
-            bg: 'bg-[#F5F6F7]',        
-            card: 'bg-[#FFFFFF]',      
+            bg: 'bg-[#F5F6F7]',       
+            card: 'bg-[#FFFFFF]',     
             border: 'border-[#E6E8EB]',
-            text: 'text-[#1F2933]',    
+            text: 'text-[#1F2933]',   
             subtext: 'text-[#6B7280]', 
             accent: 'text-[#FF8A00]', 
             gradient: 'from-[#FF8A00] to-[#FF5E00]',
@@ -279,10 +279,10 @@
                     <div className={`p-2.5 rounded-lg ${isForecast ? 'bg-red-100 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
                         <Icon size={20} />
                     </div>
-                    {trend !== null && trendValue !== null && (
+                    {trend !== null && !isNaN(trendValue) && (
                         <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                             {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            {trendValue}
+                            {trendValue}%
                         </div>
                     )}
                 </div>
@@ -492,64 +492,27 @@
 
             const kpiMetrics = useMemo(() => {
                 if (!filteredData || (!filteredData.length && selectedYear !== 'Forecast')) return null;
-
-                const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
-                const kilos24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Kilos,0);
-
                 if (selectedYear === 'Forecast') {
                     if (!chartData || chartData.length === 0) return null;
                     const totalRevenueForecast = chartData.reduce((acc, curr) => acc + curr.y2026_forecast, 0);
                     const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
-                    
+                    const kilos25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Kilos,0);
                     const impliedGrowth = rev25 > 0 ? (totalRevenueForecast - rev25) / rev25 : 0;
                     const totalKilosForecast = kilos25 * (1 + impliedGrowth);
                     const avgPriceForecast = totalKilosForecast > 0 ? totalRevenueForecast / totalKilosForecast : 0;
-                    
-                    const volumeDiff = totalKilosForecast - kilos25;
-                    const volumeTrendStr = `${volumeDiff > 0 ? '+' : ''}${formatNumber(volumeDiff)}kg`;
-
-                    return { 
-                        revenue: totalRevenueForecast, 
-                        kilos: totalKilosForecast, 
-                        clients: new Set(rawData.map(d=>d.Sucursal)).size, 
-                        avgPrice: avgPriceForecast, 
-                        growth: `${impliedGrowth > 0 ? '+' : ''}${(impliedGrowth * 100).toFixed(1)}%`, 
-                        trend: 'up',
-                        volumeTrend: volumeTrendStr,
-                        volumeTrendDir: volumeDiff >= 0 ? 'up' : 'down'
-                    };
+                    return { revenue: totalRevenueForecast, kilos: totalKilosForecast, clients: new Set(rawData.map(d=>d.Sucursal)).size, avgPrice: avgPriceForecast, growth: impliedGrowth * 100, trend: 'up' };
                 }
-
                 const revenue = filteredData.reduce((a,b)=>a+b.Total_compra,0);
                 const kilos = filteredData.reduce((a,b)=>a+b.Kilos,0);
                 const wSum = filteredData.reduce((a,b)=>a+(b.Kilos * b.Precio_por_Kg),0);
                 const avgPrice = kilos > 0 ? wSum / kilos : 0;
-                
                 let growth = 0;
-                let volumeDiff = 0;
-                let volumeTrendStr = "--";
-                let volumeTrendDir = "neutral";
-
-                if (selectedYear === '2025') {
+                if (selectedYear === 'All' || selectedYear === '2025') {
                     const rev25 = rawData.filter(d => d.Year === 2025).reduce((a,b)=>a+b.Total_compra,0);
                     const rev24 = rawData.filter(d => d.Year === 2024).reduce((a,b)=>a+b.Total_compra,0);
                     if (rev24 > 0) growth = ((rev25 - rev24) / rev24) * 100;
-                    
-                    volumeDiff = kilos25 - kilos24;
-                    volumeTrendStr = `${volumeDiff > 0 ? '+' : ''}${formatNumber(volumeDiff)}kg`;
-                    volumeTrendDir = volumeDiff >= 0 ? 'up' : 'down';
                 }
-
-                return { 
-                    revenue, 
-                    kilos, 
-                    clients: new Set(filteredData.map(d=>d.Sucursal)).size, 
-                    avgPrice, 
-                    growth: `${growth > 0 ? '+' : ''}${Math.abs(growth).toFixed(1)}%`, 
-                    trend: growth>0?'up':'down',
-                    volumeTrend: volumeTrendStr,
-                    volumeTrendDir: volumeTrendDir
-                };
+                return { revenue, kilos, clients: new Set(filteredData.map(d=>d.Sucursal)).size, avgPrice, growth: Math.abs(growth).toFixed(1), trend: growth>0?'up':'down' };
             }, [filteredData, rawData, selectedYear, chartData]);
 
             // --- Custom Tooltip Ajustado ---
@@ -603,9 +566,7 @@
                             else if (s.includes('Metepec')) cityKey='METEPEC';
                         }
                     }
-                    const forecast2026 = e.revenue2025 * (1 + (growth > 0 ? growth/100 : 0.05));
-                    const forecastVar = forecast2026 - e.revenue2025;
-                    return { ...e, city: cityKey ? CITY_COORDINATES[cityKey].label : '', growth, lostProducts: [...e.products2024].filter(x => !e.products2025.has(x)), newProducts: [...e.products2025].filter(x => !e.products2024.has(x)), forecast2026, forecastVar };
+                    return { ...e, city: cityKey ? CITY_COORDINATES[cityKey].label : '', growth, lostProducts: [...e.products2024].filter(x => !e.products2025.has(x)), newProducts: [...e.products2025].filter(x => !e.products2024.has(x)), forecast2026: e.revenue2025 * (1 + (growth > 0 ? growth/100 : 0.05)) };
                 }).sort((a,b) => b.revenue2025 - a.revenue2025);
             };
 
@@ -752,9 +713,6 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 
-                // Ordenar alfabéticamente para el reporte
-                const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
-
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(22);
                 doc.setTextColor(255, 138, 0); // Orange
@@ -763,7 +721,7 @@
                 doc.setTextColor(40);
                 doc.text(title, 14, 30);
                 
-                const tableRows = sortedData.map(e => [
+                const tableRows = data.map(e => [
                     e.name,
                     formatCurrency(e.revenue2024),
                     formatCurrency(e.revenue2025),
@@ -867,22 +825,15 @@
                                             <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
                                             <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v/1000}k`}/>
                                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                                            {(selectedYear === 'All' || selectedYear === '2025' || selectedYear === 'Forecast') && (
-                                                <Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} />
-                                            )}
-                                            {(selectedYear === 'All' || selectedYear === '2024') && (
-                                                <Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" />
-                                            )}
-                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (
-                                                <Area type="monotone" dataKey="y2026_forecast" stroke={THEME.colors.forecast} fill="transparent" strokeWidth={selectedYear === 'Forecast' ? 4 : 2} strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} name="Forecast 2026" />
-                                            )}
+                                            {selectedYear !== 'Forecast' && (<><Area type="monotone" dataKey="y2025" stroke={THEME.colors.primary} fill="url(#g25)" strokeWidth={3} name="2025" activeDot={{r:6, strokeWidth:0}} /><Area type="monotone" dataKey="y2024" stroke={THEME.colors.secondary} fill="transparent" strokeWidth={2} strokeDasharray="3 3" name="2024" /></>)}
+                                            {(selectedYear === 'All' || selectedYear === 'Forecast') && (<Area type="monotone" dataKey="y2026_forecast" stroke={THEME.colors.forecast} fill="transparent" strokeWidth={selectedYear === 'Forecast' ? 4 : 2} strokeDasharray={selectedYear === 'Forecast' ? "" : "2 2"} name="Forecast 2026" />)}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8">
                             <KPICard title={t.sales} value={formatCurrency(kpiMetrics.revenue)} subValue={t.gross_income} icon={DollarSign} trend={kpiMetrics.trend} trendValue={kpiMetrics.growth} isForecast={selectedYear === 'Forecast'} t={t} />
-                            <KPICard title={t.volume} value={formatNumber(kpiMetrics.kilos)} subValue={t.distributed} icon={Weight} trend={kpiMetrics.volumeTrendDir} trendValue={kpiMetrics.volumeTrend} isForecast={selectedYear === 'Forecast'} t={t} />
+                            <KPICard title={t.volume} value={formatNumber(kpiMetrics.kilos)} subValue={t.distributed} icon={Weight} trend="up" trendValue="--" isForecast={selectedYear === 'Forecast'} t={t} />
                             <KPICard title={t.price} value={formatCurrency(kpiMetrics.avgPrice)} subValue={t.weighted} icon={Activity} trend="neutral" trendValue="0.0" isForecast={selectedYear === 'Forecast'} t={t} />
                             <KPICard title={t.coverage} value={kpiMetrics.clients} subValue={t.active_points} icon={MapPin} trend={null} isForecast={selectedYear === 'Forecast'} t={t} />
                             </div>
@@ -974,7 +925,6 @@
                                                 <th className="p-4 text-right">2025</th>
                                                 <th className="p-4 text-right">Var %</th>
                                                 <th className="p-4 text-right">Forecast '26</th>
-                                                <th className="p-4 text-right">Var. Est.</th>
                                                 <th className="p-4">Insights</th>
                                             </tr>
                                         </thead>
@@ -993,7 +943,6 @@
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-right font-bold text-indigo-600">{formatCurrency(entity.forecast2026)}</td>
-                                                    <td className="p-4 text-right font-medium text-slate-500">{formatCurrency(entity.forecastVar)}</td>
                                                     <td className="p-4">
                                                         <div className="flex gap-2">
                                                             {entity.lostProducts.length > 0 && <AlertTriangle size={16} className="text-amber-500" />}
