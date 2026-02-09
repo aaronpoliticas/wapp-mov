@@ -135,7 +135,61 @@
                 connection_error: "No se pudo conectar a la base de datos. Verifique su conexión.",
                 retry: "Reintentar",
                 methodology: "Metodología Forecast",
-                back: "Volver"
+                back: "Volver",
+                // Nuevas traducciones
+                quarterly_evolution: "Evolución Trimestral",
+                predictive_ai: "IA Predictiva por Trimestre",
+                entity: "Entidad",
+                var_pct: "Var %",
+                var_est: "Var. Est.",
+                client: "Cliente",
+                product: "Producto",
+                share: "Share",
+                top: "Top",
+                pdf_report: "REPORTE PDF",
+                smart_summary: "Resumen Inteligente",
+                sale: "Venta",
+                methodology_title: "Metodología de Pronóstico Operativo 2026",
+                methodology_subtitle: "Explicación del motor de inteligencia artificial",
+                red_line_title: "¿De dónde sale la línea roja? (Tablero Principal)",
+                red_line_desc: "La proyección gráfica para 2026 en el tablero general utiliza un modelo específico llamado <strong>Holt-Winters con Tendencia Amortiguada (Damped Trend)</strong>.",
+                red_line_p1_title: "1. Base de Datos",
+                red_line_p1_desc: "Toma todo el historial consolidado mes a mes de 2024 y 2025. Al ser una serie continua (sin ceros), el sistema la clasifica como \"Demanda Estable\".",
+                red_line_p2_title: "2. El Algoritmo",
+                red_line_p2_desc: "Descompone la venta en tres partes: <ul class='list-disc list-inside mt-1 text-xs'><li><strong>Nivel:</strong> Volumen base actual.</li><li><strong>Tendencia:</strong> Dirección suavizada al 98%.</li><li><strong>Estacionalidad:</strong> Patrones cíclicos.</li></ul>",
+                red_line_p3_title: "3. Interpretación",
+                red_line_p3_desc: "Si ves \"picos y valles\", es la <strong>estacionalidad</strong>. Si ves que sube o baja, es la <strong>tendencia</strong>.",
+                detection_title: "1. Detección Inteligente de Demanda",
+                detection_desc: "El sistema analiza el comportamiento histórico para clasificarla en tres tipos:",
+                type_stable: "Estable",
+                type_stable_desc: "Ventas continuas. Prioriza tendencia y estacionalidad.",
+                type_intermittent: "Intermitente",
+                type_intermittent_desc: "Ventas con huecos. Calcula probabilidad de compra (Croston).",
+                type_sparse: "Escasa / Nueva",
+                type_sparse_desc: "Historial insuficiente. Usa tendencias del sector.",
+                engines_title: "2. Motores de Cálculo",
+                engines_desc: "Se activan diferentes algoritmos optimizados:",
+                engine_hw: "Holt-Winters Adaptativo",
+                engine_hw_desc: "Para series estables. Ajusta suavizado y estacionalidad.",
+                engine_croston: "Croston TSB",
+                engine_croston_desc: "Para series irregulares. Separa cuándo y cuánto comprarán.",
+                engine_structural: "Crecimiento Estructural",
+                engine_structural_desc: "Para anuales. Detecta pendiente real con límites operativos.",
+                realism_title: "Realismo Operativo",
+                realism_desc: "Prioriza la utilidad para planificación. Penaliza volatilidad extrema y amplifica tendencias consolidadas.",
+                // PDF Report Specifics
+                report_title: "REPORTE EJECUTIVO DE RENDIMIENTO",
+                date_emission: "Fecha de Emisión",
+                period_analyzed: "Periodo Analizado",
+                scope: "Alcance",
+                period_sales: "VENTAS PERIODO",
+                period_vol: "VOLUMEN",
+                annual_context: "CONTEXTO ANUAL & PROYECCIÓN",
+                concept: "Concepto",
+                annual_total: "Total Anual",
+                product_breakdown: "DESGLOSE DE PRODUCTOS (PERIODO)",
+                participation: "Participación",
+                narrative_template: "En el periodo seleccionado, {branch} generaron {revenue} con un volumen de {kilos} Kg. El producto más solicitado fue \"{topProduct}\" ({topProductKg} Kg).",
             },
             FR: {
                 dashboard: "Tableau de Bord",
@@ -174,7 +228,61 @@
                 connection_error: "Impossible de se connecter à la base de données. Vérifiez votre connexion.",
                 retry: "Réessayer",
                 methodology: "Méthodologie Prévision",
-                back: "Retour"
+                back: "Retour",
+                // Nouvelles traductions
+                quarterly_evolution: "Évolution Trimestrielle",
+                predictive_ai: "IA Prédictive par Trimestre",
+                entity: "Entité",
+                var_pct: "Var %",
+                var_est: "Var. Est.",
+                client: "Client",
+                product: "Produit",
+                share: "Part",
+                top: "Top",
+                pdf_report: "RAPPORT PDF",
+                smart_summary: "Résumé Intelligent",
+                sale: "Vente",
+                methodology_title: "Méthodologie de Prévision Opérationnelle 2026",
+                methodology_subtitle: "Explication du moteur d'intelligence artificielle",
+                red_line_title: "D'où vient la ligne rouge ? (Tableau Principal)",
+                red_line_desc: "La projection graphique pour 2026 sur le tableau principal utilise un modèle spécifique appelé <strong>Holt-Winters avec Tendance Amortie (Damped Trend)</strong>.",
+                red_line_p1_title: "1. Base de Données",
+                red_line_p1_desc: "Prend tout l'historique consolidé mois par mois de 2024 et 2025. Série continue classée comme \"Demande Stable\".",
+                red_line_p2_title: "2. L'Algorithme",
+                red_line_p2_desc: "Décompose la vente en trois parties : <ul class='list-disc list-inside mt-1 text-xs'><li><strong>Niveau:</strong> Volume de base.</li><li><strong>Tendance:</strong> Direction adoucie à 98%.</li><li><strong>Saisonnalité:</strong> Modèles cycliques.</li></ul>",
+                red_line_p3_title: "3. Interprétation",
+                red_line_p3_desc: "Les \"pics et vallées\" sont la <strong>saisonnalité</strong>. La montée ou la descente est la <strong>tendance</strong>.",
+                detection_title: "1. Détection Intelligente de la Demande",
+                detection_desc: "Le système analyse le comportement historique pour le classer en trois types :",
+                type_stable: "Stable",
+                type_stable_desc: "Ventes continues. Priorité à la tendance et saisonnalité.",
+                type_intermittent: "Intermittent",
+                type_intermittent_desc: "Ventes avec trous. Calcule la probabilité d'achat (Croston).",
+                type_sparse: "Rare / Nouvelle",
+                type_sparse_desc: "Historique insuffisant. Utilise les tendances du secteur.",
+                engines_title: "2. Moteurs de Calcul",
+                engines_desc: "Différents algorithmes optimisés sont activés :",
+                engine_hw: "Holt-Winters Adaptatif",
+                engine_hw_desc: "Pour séries stables. Ajuste lissage et saisonnalité.",
+                engine_croston: "Croston TSB",
+                engine_croston_desc: "Pour séries irrégulières. Sépare quand et combien acheter.",
+                engine_structural: "Croissance Structurelle",
+                engine_structural_desc: "Pour annuels. Détecte la pente réelle avec limites opérationnelles.",
+                realism_title: "Réalisme Opérationnel",
+                realism_desc: "Priorité à l'utilité pour la planification. Pénalise la volatilité extrême et amplifie les tendances consolidées.",
+                // PDF Report Specifics
+                report_title: "RAPPORT EXÉCUTIF DE PERFORMANCE",
+                date_emission: "Date d'Émission",
+                period_analyzed: "Période Analysée",
+                scope: "Portée",
+                period_sales: "VENTES PÉRIODE",
+                period_vol: "VOLUME",
+                annual_context: "CONTEXTE ANNUEL & PROJECTION",
+                concept: "Concept",
+                annual_total: "Total Annuel",
+                product_breakdown: "RÉPARTITION DES PRODUITS (PÉRIODE)",
+                participation: "Participation",
+                narrative_template: "Sur la période sélectionnée, {branch} ont généré {revenue} avec un volume de {kilos} Kg. Le produit le plus demandé a été \"{topProduct}\" ({topProductKg} Kg).",
             }
         };
 
@@ -228,6 +336,41 @@
             'Mayson Kayser - Arcos Bosques': 'CDMX'
         };
 
+        // --- ALGORITMOS ---
+        const calculateHoltWinters = (data, seasonLength = 12, alpha = 0.2, beta = 0.1, gamma = 0.1, forecastLength = 12) => {
+            if (!data || data.length === 0) return Array(forecastLength).fill(0);
+            if (data.length < seasonLength * 2) {
+                const growth = data.length > 12 ? (data[data.length-1] - data[0]) / data.length : 0.05;
+                const lastVal = data[data.length - 1] || 0;
+                return Array.from({length: forecastLength}, (_, i) => lastVal * (1 + growth * (i+1)));
+            }
+            let seasonals = {};
+            let seasonalAvg = Array.from({length: seasonLength}, () => 0);
+            const dataAvg = data.reduce((a,b)=>a+b,0)/data.length;
+            for (let i = 0; i < seasonLength; i++) {
+                seasonalAvg[i] = (data[i] + data[i + seasonLength]) / 2;
+                seasonals[i] = seasonalAvg[i] - dataAvg;
+            }
+            let level = data[seasonLength-1]; 
+            let trend = (data[seasonLength-1] - data[0]) / seasonLength; 
+            
+            for (let i = seasonLength; i < data.length; i++) {
+                const val = data[i];
+                const lastLevel = level;
+                const seasonIdx = i % seasonLength;
+                level = alpha * (val - seasonals[seasonIdx]) + (1 - alpha) * (lastLevel + trend);
+                trend = beta * (level - lastLevel) + (1 - beta) * trend;
+                seasonals[seasonIdx] = gamma * (val - level) + (1 - gamma) * seasonals[seasonIdx];
+            }
+            const forecast = [];
+            for (let i = 1; i <= forecastLength; i++) {
+                const seasonIdx = (data.length + i - 1) % seasonLength;
+                const val = level + (trend * i) + seasonals[seasonIdx];
+                forecast.push(val > 0 ? val : 0);
+            }
+            return forecast;
+        };
+
         // --- OPERATIONAL FORECAST SYSTEM ---
 
         // Helper: Detectar tipo de demanda
@@ -265,7 +408,7 @@
         };
 
         // Modelo 3: Holt-Winters Operativo (Existente + Mejoras)
-        const calculateHoltWinters = (data, seasonLength = 12, alpha = 0.25, beta = 0.05, gamma = 0.1, forecastLength = 12) => {
+        const calculateHoltWintersOp = (data, seasonLength = 12, alpha = 0.25, beta = 0.05, gamma = 0.1, forecastLength = 12) => {
             if (!data || data.length === 0) return Array(forecastLength).fill(0);
             
             // Si hay pocos datos, fallback a proyección lineal simple
@@ -337,7 +480,7 @@
                 const variance = series.reduce((a,b)=>a+Math.pow(b-mean,2),0)/series.length;
                 const lowSeasonality = (Math.sqrt(variance)/mean) < 0.1;
                 
-                return calculateHoltWinters(series, 12, 0.3, 0.1, lowSeasonality ? 0 : 0.15, forecastLength);
+                return calculateHoltWintersOp(series, 12, 0.3, 0.1, lowSeasonality ? 0 : 0.15, forecastLength);
             }
         };
 
@@ -769,10 +912,22 @@
                 const prodCounts = {};
                 data.forEach(d => { prodCounts[d.Variedad] = (prodCounts[d.Variedad] || 0) + d.Kilos; });
                 const topProduct = Object.entries(prodCounts).sort((a,b)=>b[1]-a[1])[0];
-                const narrative = `En el periodo seleccionado, ${periodBranch === 'All' ? 'todas las sucursales' : periodBranch} generaron ${formatCurrency(revenue)} con un volumen de ${formatNumber(kilos)} Kg. El producto más solicitado fue "${topProduct ? topProduct[0] : 'N/A'}" (${topProduct ? formatNumber(topProduct[1]) : 0} Kg).`;
+                
+                const topProductKg = topProduct ? formatNumber(topProduct[1]) : 0;
+                const topProductName = topProduct ? topProduct[0] : 'N/A';
+                const branchText = periodBranch === 'All' ? (lang === 'MX' ? 'todas las sucursales' : 'toutes les succursales') : periodBranch;
+                
+                // --- GENERACIÓN DE NARRATIVA DINÁMICA ---
+                let narrative = t.narrative_template
+                    .replace('{branch}', branchText)
+                    .replace('{revenue}', formatCurrency(revenue))
+                    .replace('{kilos}', formatNumber(kilos))
+                    .replace('{topProduct}', topProductName)
+                    .replace('{topProductKg}', topProductKg);
+
                 const breakdown = Object.entries(prodCounts).map(([name, kg]) => ({ name, kg, revenue: data.filter(d=>d.Variedad === name).reduce((a,b)=>a+b.Total_compra,0) })).sort((a,b) => b.kg - a.kg);
                 return { revenue, kilos, narrative, breakdown, empty: false };
-            }, [rawData, periodStart, periodEnd, periodBranch]);
+            }, [rawData, periodStart, periodEnd, periodBranch, lang]);
 
             const downloadPDF = () => {
                 if (!periodAnalysisData || periodAnalysisData.empty || !window.jspdf) return;
@@ -793,22 +948,22 @@
                 doc.text("SSC", 20, 25);
                 doc.setFontSize(10);
                 doc.setTextColor(100);
-                doc.text("REPORTE EJECUTIVO DE RENDIMIENTO", 20, 32);
+                doc.text(t.report_title, 20, 32);
                 doc.setDrawColor(230);
                 doc.line(20, 38, 190, 38);
 
                 doc.setFontSize(10);
                 doc.setTextColor(50);
-                doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 20, 50);
-                doc.text(`Periodo Analizado: ${periodStart} al ${periodEnd}`, 20, 56);
-                doc.text(`Alcance: ${periodBranch}`, 20, 62);
+                doc.text(`${t.date_emission}: ${new Date().toLocaleDateString()}`, 20, 50);
+                doc.text(`${t.period_analyzed}: ${periodStart} - ${periodEnd}`, 20, 56);
+                doc.text(`${t.scope}: ${periodBranch}`, 20, 62);
 
                 doc.setFillColor(...secondaryColor);
                 doc.rect(20, 70, 170, 30, 'F');
                 doc.setTextColor(255);
                 doc.setFontSize(12);
-                doc.text("VENTAS PERIODO", 30, 82);
-                doc.text("VOLUMEN", 120, 82);
+                doc.text(t.period_sales, 30, 82);
+                doc.text(t.period_vol, 120, 82);
                 doc.setFontSize(16);
                 doc.setFont("helvetica", "bold");
                 doc.text(formatCurrency(periodAnalysisData.revenue), 30, 92);
@@ -822,12 +977,12 @@
 
                 doc.setFontSize(11);
                 doc.setTextColor(...primaryColor);
-                doc.text("CONTEXTO ANUAL & PROYECCIÓN", 20, 140);
+                doc.text(t.annual_context, 20, 140);
                 
                 doc.autoTable({
                     startY: 145,
-                    head: [['Concepto', 'Ventas 2024', 'Ventas 2025', 'Crecimiento', 'Forecast 2026']],
-                    body: [['Total Anual', formatCurrency(rev24), formatCurrency(rev25), `${(growth*100).toFixed(1)}%`, formatCurrency(forecast)]],
+                    head: [[t.concept, `Ventas 2024`, `Ventas 2025`, t.growth, t.forecast]],
+                    body: [[t.annual_total, formatCurrency(rev24), formatCurrency(rev25), `${(growth*100).toFixed(1)}%`, formatCurrency(forecast)]],
                     theme: 'grid',
                     headStyles: { fillColor: secondaryColor },
                     styles: { fontSize: 9 }
@@ -835,13 +990,13 @@
 
                 doc.setFontSize(11);
                 doc.setTextColor(...primaryColor);
-                doc.text("DESGLOSE DE PRODUCTOS (PERIODO)", 20, doc.lastAutoTable.finalY + 15);
+                doc.text(t.product_breakdown, 20, doc.lastAutoTable.finalY + 15);
 
                 const productRows = periodAnalysisData.breakdown.map(item => [item.name, `${formatNumber(item.kg)} Kg`, formatCurrency(item.revenue), `${((item.kg / periodAnalysisData.kilos) * 100).toFixed(1)}%`]);
 
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 20,
-                    head: [['Producto', 'Volumen', 'Venta Total', 'Participación']],
+                    head: [[t.product, t.volume, t.sale, t.participation]],
                     body: productRows,
                     theme: 'striped',
                     headStyles: { fillColor: primaryColor },
@@ -877,7 +1032,7 @@
 
                 doc.autoTable({
                     startY: 35,
-                    head: [['Entidad', '2024', '2025', 'Var %', 'Forecast 26']],
+                    head: [[t.entity, '2024', '2025', t.var_pct, t.forecast]],
                     body: tableRows,
                     theme: 'striped',
                     headStyles: { fillColor: [30, 58, 138] }, // Navy
@@ -1004,8 +1159,8 @@
                                         <ArrowRight className="rotate-180" size={20} />
                                     </button>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">Metodología de Pronóstico Operativo 2026</h2>
-                                        <p className="text-gray-500 text-sm">Explicación del motor de inteligencia artificial</p>
+                                        <h2 className="text-2xl font-bold text-gray-900">{t.methodology_title}</h2>
+                                        <p className="text-gray-500 text-sm">{t.methodology_subtitle}</p>
                                     </div>
                                 </div>
 
@@ -1014,29 +1169,22 @@
                                     <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-4 opacity-5 text-red-600"><TrendingUp size={100} /></div>
                                         <h3 className="font-bold text-lg text-red-700 mb-4 flex items-center gap-2">
-                                            <Zap size={20} /> ¿De dónde sale la línea roja? (Tablero Principal)
+                                            <Zap size={20} /> {t.red_line_title}
                                         </h3>
                                         <div className="text-sm text-gray-700 space-y-4 relative z-10">
-                                            <p>
-                                                La proyección gráfica para 2026 en el tablero general utiliza un modelo específico llamado <strong>Holt-Winters con Tendencia Amortiguada (Damped Trend)</strong>.
-                                            </p>
+                                            <p dangerouslySetInnerHTML={{__html: t.red_line_desc}}></p>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                                                    <span className="font-bold text-red-800 block mb-1">1. Base de Datos</span>
-                                                    Toma todo el historial consolidado mes a mes de 2024 y 2025. Al ser una serie continua (sin ceros), el sistema la clasifica como "Demanda Estable".
+                                                    <span className="font-bold text-red-800 block mb-1">{t.red_line_p1_title}</span>
+                                                    {t.red_line_p1_desc}
                                                 </div>
                                                 <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                                                    <span className="font-bold text-red-800 block mb-1">2. El Algoritmo</span>
-                                                    Descompone la venta en tres partes:
-                                                    <ul className="list-disc list-inside mt-1 text-xs text-red-700">
-                                                        <li><strong>Nivel:</strong> Volumen base actual.</li>
-                                                        <li><strong>Tendencia:</strong> Dirección de crecimiento, suavizada al 98% para evitar proyecciones irreales.</li>
-                                                        <li><strong>Estacionalidad:</strong> Patrones cíclicos detectados.</li>
-                                                    </ul>
+                                                    <span className="font-bold text-red-800 block mb-1">{t.red_line_p2_title}</span>
+                                                    <div dangerouslySetInnerHTML={{__html: t.red_line_p2_desc}}></div>
                                                 </div>
                                                 <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                                                    <span className="font-bold text-red-800 block mb-1">3. Interpretación</span>
-                                                    Si ves "picos y valles", es la <strong>estacionalidad</strong> repitiendo patrones pasados. Si ves que sube o baja, es la <strong>tendencia</strong> amortiguada.
+                                                    <span className="font-bold text-red-800 block mb-1">{t.red_line_p3_title}</span>
+                                                    <div dangerouslySetInnerHTML={{__html: t.red_line_p3_desc}}></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1046,22 +1194,22 @@
                                         <div className="flex items-start gap-4">
                                             <div className="bg-blue-50 p-3 rounded-xl text-blue-600"><BrainCircuit size={24} /></div>
                                             <div>
-                                                <h3 className="font-bold text-gray-900 mb-2">1. Detección Inteligente de Demanda (Detalle General)</h3>
+                                                <h3 className="font-bold text-gray-900 mb-2">{t.detection_title}</h3>
                                                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                                                    Para el resto de las proyecciones (sucursales y productos), el sistema no aplica una fórmula única. Analiza el comportamiento histórico para clasificarla en tres tipos:
+                                                    {t.detection_desc}
                                                 </p>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                        <span className="font-bold text-emerald-600 block mb-1">Estable</span>
-                                                        Ventas continuas con baja frecuencia de ceros. Se prioriza la tendencia y estacionalidad.
+                                                        <span className="font-bold text-emerald-600 block mb-1">{t.type_stable}</span>
+                                                        {t.type_stable_desc}
                                                     </div>
                                                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                        <span className="font-bold text-amber-600 block mb-1">Intermitente</span>
-                                                        Ventas con huecos frecuentes. Se calcula probabilidad de compra y volumen esperado (Modelo Croston).
+                                                        <span className="font-bold text-amber-600 block mb-1">{t.type_intermittent}</span>
+                                                        {t.type_intermittent_desc}
                                                     </div>
                                                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                        <span className="font-bold text-purple-600 block mb-1">Escasa / Nueva</span>
-                                                        Historial insuficiente. Se proyecta usando tendencias ponderadas del sector.
+                                                        <span className="font-bold text-purple-600 block mb-1">{t.type_sparse}</span>
+                                                        {t.type_sparse_desc}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1072,22 +1220,22 @@
                                         <div className="flex items-start gap-4">
                                             <div className="bg-orange-50 p-3 rounded-xl text-orange-600"><Target size={24} /></div>
                                             <div>
-                                                <h3 className="font-bold text-gray-900 mb-2">2. Motores de Cálculo</h3>
+                                                <h3 className="font-bold text-gray-900 mb-2">{t.engines_title}</h3>
                                                 <p className="text-sm text-gray-600 leading-relaxed">
-                                                    Dependiendo de la clasificación, se activan diferentes algoritmos matemáticos optimizados para la operación:
+                                                    {t.engines_desc}
                                                 </p>
                                                 <ul className="mt-4 space-y-3 text-sm text-gray-700">
                                                     <li className="flex gap-2">
-                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Holt-Winters Adaptativo</span>
-                                                        <span>Para series estables. Ajusta dinámicamente suavizado (alpha) y estacionalidad (gamma) según la varianza reciente.</span>
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">{t.engine_hw}</span>
+                                                        <span>{t.engine_hw_desc}</span>
                                                     </li>
                                                     <li className="flex gap-2">
-                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Croston TSB</span>
-                                                        <span>Para series irregulares. Separa la predicción de "cuándo comprarán" de "cuánto comprarán" para evitar falsos promedios.</span>
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">{t.engine_croston}</span>
+                                                        <span>{t.engine_croston_desc}</span>
                                                     </li>
                                                     <li className="flex gap-2">
-                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Crecimiento Estructural</span>
-                                                        <span>Para proyecciones anuales (Tablas). Detecta la pendiente de crecimiento real (2024-2025) y aplica límites operativos (+40% cap / -20% floor) para evitar proyecciones irreales.</span>
+                                                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">{t.engine_structural}</span>
+                                                        <span>{t.engine_structural_desc}</span>
                                                     </li>
                                                 </ul>
                                             </div>
@@ -1095,9 +1243,9 @@
                                     </div>
 
                                     <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-2xl text-white shadow-lg">
-                                        <h3 className="font-bold flex items-center gap-2 mb-2"><BarChart3 size={20}/> Realismo Operativo</h3>
+                                        <h3 className="font-bold flex items-center gap-2 mb-2"><BarChart3 size={20}/> {t.realism_title}</h3>
                                         <p className="text-sm text-gray-300 opacity-90">
-                                            A diferencia de los modelos puramente académicos, este motor prioriza la utilidad para la planificación de suministro. Penaliza la volatilidad extrema en clientes pequeños y amplifica las tendencias consolidadas en clientes Top, asegurando que el Forecast 2026 sea una herramienta de decisión y no solo una estadística.
+                                            {t.realism_desc}
                                         </p>
                                     </div>
                                 </div>
@@ -1109,11 +1257,11 @@
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-lg text-gray-900">{t.ranking}</h3>
-                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">Top</span>
+                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">{t.top}</span>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
-                                        <thead className="text-gray-400 border-b border-gray-100"><tr><th className="pb-3 pl-2 font-medium">Producto</th><th className="pb-3 text-right font-medium">Volumen</th><th className="pb-3 text-right font-medium pr-2">Share</th></tr></thead>
+                                        <thead className="text-gray-400 border-b border-gray-100"><tr><th className="pb-3 pl-2 font-medium">{t.product}</th><th className="pb-3 text-right font-medium">{t.volume}</th><th className="pb-3 text-right font-medium pr-2">{t.share}</th></tr></thead>
                                         <tbody className="divide-y divide-gray-50">
                                             {consumptionData.map((item, i) => (
                                                 <tr key={i} className="hover:bg-gray-50 transition-colors">
@@ -1128,7 +1276,7 @@
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-                                    <h3 className="font-bold text-lg text-gray-900 mb-6">Evolución Trimestral</h3>
+                                    <h3 className="font-bold text-lg text-gray-900 mb-6">{t.quarterly_evolution}</h3>
                                     <div className="h-[250px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={quarterlyData.data}>
@@ -1146,7 +1294,7 @@
                                     <div className="absolute right-0 top-0 p-6 opacity-20"><Zap size={140} /></div>
                                     <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-6">
-                                            <div><h3 className="text-white/90 font-bold flex items-center gap-2"><Zap size={18}/> {t.forecast}</h3><p className="text-xs text-white/70 mt-1">IA Predictiva por Trimestre</p></div>
+                                            <div><h3 className="text-white/90 font-bold flex items-center gap-2"><Zap size={18}/> {t.forecast}</h3><p className="text-xs text-white/70 mt-1">{t.predictive_ai}</p></div>
                                             <div className="relative">
                                                 <select value={selectedForecastQuarter} onChange={(e) => setSelectedForecastQuarter(e.target.value)} className="appearance-none bg-white/20 border border-white/30 text-white text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none cursor-pointer"><option className="text-gray-900" value="Q1">Q1</option><option className="text-gray-900" value="Q2">Q2</option><option className="text-gray-900" value="Q3">Q3</option><option className="text-gray-900" value="Q4">Q4</option></select>
                                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none" />
@@ -1178,19 +1326,19 @@
                                         <h2 className="text-xl font-bold text-gray-900">{activeTab === 'branches' ? t.branches : t.social}</h2>
                                         <p className="text-sm text-gray-500 mt-1">{t.compare_annual}</p>
                                     </div>
-                                    <button onClick={() => downloadTablePDF(activeTab === 'branches' ? branchInsightsData : socialReasonInsightsData, activeTab === 'branches' ? 'Rendimiento Sucursales' : 'Analisis Razón Social')} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"><Download size={18} /></button>
+                                    <button onClick={() => downloadTablePDF(activeTab === 'branches' ? branchInsightsData : socialReasonInsightsData, activeTab === 'branches' ? t.branches : t.social)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"><Download size={18} /></button>
                                 </div>
                                 <div className="overflow-x-auto scroll-smooth">
                                     <table className="w-full text-left min-w-[600px]">
                                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                                             <tr>
-                                                <th className="p-4 pl-6">Entidad</th>
+                                                <th className="p-4 pl-6">{t.entity}</th>
                                                 <th className="p-4 text-right">2024</th>
                                                 <th className="p-4 text-right">2025</th>
-                                                <th className="p-4 text-right">Var %</th>
-                                                <th className="p-4 text-right">Forecast '26</th>
-                                                <th className="p-4 text-right">Var. Est.</th>
-                                                <th className="p-4">Insights</th>
+                                                <th className="p-4 text-right">{t.var_pct}</th>
+                                                <th className="p-4 text-right">{t.forecast}</th>
+                                                <th className="p-4 text-right">{t.var_est}</th>
+                                                <th className="p-4">{t.insights}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 text-sm">
@@ -1198,7 +1346,7 @@
                                                 <tr key={i} onClick={() => setSelectedEntity(entity)} className="hover:bg-orange-50/50 transition-colors cursor-pointer group">
                                                     <td className="p-4 pl-6">
                                                         <div className="font-bold text-gray-900">{entity.name}</div>
-                                                        <div className="text-xs text-gray-400">{activeTab === 'branches' ? entity.city : 'Cliente'}</div>
+                                                        <div className="text-xs text-gray-400">{activeTab === 'branches' ? entity.city : t.client}</div>
                                                     </td>
                                                     <td className="p-4 text-right font-medium text-slate-500">{formatCurrency(entity.revenue2024)}</td>
                                                     <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(entity.revenue2025)}</td>
@@ -1229,17 +1377,17 @@
                             <div className="space-y-6 animate-in fade-in">
                                 <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Search size={20} className="text-[#FF8A00]"/> Explorador de Fechas</h3>
+                                        <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Search size={20} className="text-[#FF8A00]"/> {t.period}</h3>
                                         {periodAnalysisData && !periodAnalysisData.empty && (
                                             <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-lg font-bold text-xs transition-colors shadow-lg">
-                                                <Download size={14} /> REPORTE PDF
+                                                <Download size={14} /> {t.pdf_report}
                                             </button>
                                         )}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Inicio</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodStart(e.target.value)} /></div>
-                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Fin</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodEnd(e.target.value)} /></div>
-                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">Filtrar por</label><div className="relative"><select className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none appearance-none" onChange={(e) => setPeriodBranch(e.target.value)}><option value="All">Todas las Sucursales</option>{branchList.map((b, i) => <option key={i} value={b}>{b}</option>)}</select><ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">{t.period_start}</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodStart(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">{t.period_end}</label><input type="date" min="2024-01-01" max="2025-12-31" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none" onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-gray-500 uppercase">{t.filter}</label><div className="relative"><select className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none appearance-none" onChange={(e) => setPeriodBranch(e.target.value)}><option value="All">{t.all_branches}</option>{branchList.map((b, i) => <option key={i} value={b}>{b}</option>)}</select><ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" /></div></div>
                                     </div>
                                 </div>
 
@@ -1247,15 +1395,15 @@
                                     <div className="space-y-6">
                                         <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl flex gap-4">
                                             <Info className="text-indigo-600 shrink-0 mt-0.5" size={20} />
-                                            <div><h4 className="text-indigo-900 font-bold mb-1">Resumen Inteligente</h4><p className="text-indigo-700 text-sm leading-relaxed">{periodAnalysisData.narrative}</p></div>
+                                            <div><h4 className="text-indigo-900 font-bold mb-1">{t.smart_summary}</h4><p className="text-indigo-700 text-sm leading-relaxed">{periodAnalysisData.narrative}</p></div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">Ventas Totales</p><p className="text-3xl font-extrabold text-gray-900">{formatCurrency(periodAnalysisData.revenue)}</p></div>
-                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">Volumen</p><p className="text-3xl font-extrabold text-[#FF8A00]">{formatNumber(periodAnalysisData.kilos)} <span className="text-lg text-gray-400">Kg</span></p></div>
+                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">{t.sales}</p><p className="text-3xl font-extrabold text-gray-900">{formatCurrency(periodAnalysisData.revenue)}</p></div>
+                                            <div className="bg-white p-5 rounded-xl border border-gray-100 text-center shadow-sm"><p className="text-gray-400 text-xs font-bold uppercase mb-1">{t.volume}</p><p className="text-3xl font-extrabold text-[#FF8A00]">{formatNumber(periodAnalysisData.kilos)} <span className="text-lg text-gray-400">Kg</span></p></div>
                                         </div>
                                         <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
                                             <table className="w-full text-sm text-left">
-                                                <thead className="text-gray-500 bg-gray-50 uppercase text-xs"><tr><th className="p-4 pl-6">Producto</th><th className="p-4 text-right">Kilos</th><th className="p-4 text-right pr-6">Venta</th></tr></thead>
+                                                <thead className="text-gray-500 bg-gray-50 uppercase text-xs"><tr><th className="p-4 pl-6">{t.product}</th><th className="p-4 text-right">Kilos</th><th className="p-4 text-right pr-6">{t.sale}</th></tr></thead>
                                                 <tbody className="divide-y divide-gray-50">
                                                     {periodAnalysisData.breakdown.map((item, idx) => (
                                                         <tr key={idx} className="hover:bg-gray-50/50"><td className="p-4 pl-6 text-gray-900 font-medium">{item.name}</td><td className="p-4 text-right text-[#FF8A00] font-bold">{formatNumber(item.kg)}</td><td className="p-4 text-right pr-6 text-gray-600">{formatCurrency(item.revenue)}</td></tr>
